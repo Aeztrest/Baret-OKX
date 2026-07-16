@@ -1,0 +1,29 @@
+# Render Blueprint — Vetra (standalone). Usage: render.com -> New -> Blueprint -> pick this repo.
+services:
+  - type: web
+    name: vetra-api
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      # Set to "true" and configure X402_PAY_TO once you have a receiving wallet.
+      - key: X402_ENABLED
+        value: "false"
+      - key: X402_PAY_TO
+        value: ""
+      - key: X402_NETWORK
+        value: eip155:8453
+      - key: X402_FACILITATOR_URL
+        value: https://www.x402.org/facilitator
+      - key: VETRA_CHECK_PRICE
+        value: "$0.01"
+      - key: VETRA_CHECK_PRICE_ATOMIC
+        value: "10000"
