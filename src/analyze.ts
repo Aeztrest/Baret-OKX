@@ -1,6 +1,6 @@
 import { createPublicClient, http, decodeFunctionData, parseTransaction, isAddress, type Hex } from "viem";
 import { resolveChain } from "./config.js";
-import { KNOWN_FUNCTIONS } from "./detectors/signatures.js";
+import { KNOWN_FUNCTIONS, WRAPPER_FUNCTIONS } from "./detectors/signatures.js";
 import { detectApprovalFindings, type DecodedApprovalCall } from "./detectors/approvals.js";
 import {
   detectPrivilegedCallFindings,
@@ -13,6 +13,14 @@ import type { CheckRequest, CheckResult, RiskFinding, Severity } from "./types.j
 export class AnalyzeValidationError extends Error {}
 
 const SEVERITY_RANK: Record<Severity, number> = { low: 1, medium: 2, high: 3, critical: 4 };
+
+// A malicious approve()/setApprovalForAll() is rarely the top-level call —
+// it usually rides inside a multicall or a Safe execTransaction. Unwrap a
+// bounded number of levels/calls so batching can't be used to hide a finding
+// from a static top-level-only decode (and can't be abused as a decode-cost
+// DoS vector either).
+const MAX_WRAP_DEPTH = 2;
+const MAX_INNER_CALLS = 20;
 
 function toBigInt(value: string | undefined): bigint {
   if (value === undefined || value === "") return 0n;
@@ -32,6 +40,53 @@ function decodeApprovalCall(functionName: string | undefined, args: readonly unk
     return { kind: "permit", owner: args[0] as string, spender: args[1] as string, value: args[2] as bigint };
   }
   return undefined;
+}
+
+function decodeKnownCall(data: Hex): { functionName?: string; approvalCall?: DecodedApprovalCall } {
+  const selector = data.length >= 10 ? data.slice(0, 10) : undefined;
+  const known = selector ? KNOWN_FUNCTIONS[selector] : undefined;
+  if (!known) return {};
+  try {
+    const decoded = decodeFunctionData({ abi: known.abi, data });
+    return {
+      functionName: decoded.functionName,
+      approvalCall: decodeApprovalCall(decoded.functionName, decoded.args as readonly unknown[] | undefined),
+    };
+  } catch {
+    return { functionName: known.name };
+  }
+}
+
+function tagWrapped(f: RiskFinding): RiskFinding {
+  return {
+    ...f,
+    message: `Inside a batched call: ${f.message}`,
+    details: { ...f.details, insideBatchedCall: true },
+  };
+}
+
+/** Decodes `data`, unwrapping multicall/execTransaction-style wrappers up to MAX_WRAP_DEPTH. */
+function analyzeCalldata(data: Hex, depth: number): RiskFinding[] {
+  const selector = data.length >= 10 ? data.slice(0, 10) : undefined;
+  const wrapper = selector ? WRAPPER_FUNCTIONS[selector] : undefined;
+
+  if (wrapper && depth < MAX_WRAP_DEPTH) {
+    const findings: RiskFinding[] = [];
+    try {
+      const decoded = decodeFunctionData({ abi: wrapper.abi, data });
+      const inner = wrapper.extractInner(decoded.args as readonly unknown[]).slice(0, MAX_INNER_CALLS);
+      for (const innerData of inner) {
+        findings.push(...analyzeCalldata(innerData, depth + 1).map(tagWrapped));
+      }
+    } catch {
+      // Malformed wrapper calldata — no inner findings to add, but this isn't
+      // itself an error worth failing the whole analysis over.
+    }
+    return findings;
+  }
+
+  const { functionName, approvalCall } = decodeKnownCall(data);
+  return [...detectApprovalFindings(approvalCall), ...detectPrivilegedCallFindings(functionName)];
 }
 
 export async function analyzeTransaction(req: CheckRequest): Promise<CheckResult> {
@@ -85,23 +140,11 @@ export async function analyzeTransaction(req: CheckRequest): Promise<CheckResult
   }
 
   const selector = data.length >= 10 ? data.slice(0, 10) : undefined;
-  const known = selector ? KNOWN_FUNCTIONS[selector] : undefined;
+  const wrapperTop = selector ? WRAPPER_FUNCTIONS[selector] : undefined;
+  const topDecoded = wrapperTop ? { functionName: wrapperTop.name, approvalCall: undefined } : decodeKnownCall(data);
+  const { functionName, approvalCall } = topDecoded;
 
-  let functionName: string | undefined;
-  let approvalCall: DecodedApprovalCall | undefined;
-  if (known) {
-    try {
-      const decoded = decodeFunctionData({ abi: known.abi, data });
-      functionName = decoded.functionName;
-      approvalCall = decodeApprovalCall(decoded.functionName, decoded.args as readonly unknown[] | undefined);
-    } catch {
-      functionName = known.name;
-    }
-  }
-
-  const findings: RiskFinding[] = [];
-  findings.push(...detectApprovalFindings(approvalCall));
-  findings.push(...detectPrivilegedCallFindings(functionName));
+  const findings: RiskFinding[] = analyzeCalldata(data, 0);
 
   const nativeTransferFinding = detectNativeTransferFinding({ value, data, to, toIsContract: isContract });
   if (nativeTransferFinding) findings.push(nativeTransferFinding);

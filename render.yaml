@@ -14,6 +14,9 @@ services:
         value: "22"
       - key: NODE_ENV
         value: production
+      # Render sits behind a proxy — needed for correct client IPs (rate-limit, logs).
+      - key: TRUST_PROXY
+        value: "true"
       # Set to "true" and configure X402_PAY_TO once you have a receiving wallet.
       - key: X402_ENABLED
         value: "false"

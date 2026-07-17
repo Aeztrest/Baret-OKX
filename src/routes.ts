@@ -31,13 +31,19 @@ export function registerRoutes(app: FastifyInstance): void {
 
   // Free, unmetered mirror of /v1/check for the landing-page demo widget
   // only. Real integrations should use the paid /v1/check or the MCP tool.
-  app.post("/v1/demo-check", async (req, reply) => {
-    const body = req.body as CheckRequest | undefined;
-    if (!body || typeof body !== "object" || !body.transaction) {
-      return reply.code(400).send({ error: "Request body must include `transaction`." });
-    }
-    return reply.send(await analyzeTransaction(body));
-  });
+  // Tighter rate limit than the global default: it's unmetered and calls a
+  // real RPC, so it's the cheapest route to abuse.
+  app.post(
+    "/v1/demo-check",
+    { config: { rateLimit: { max: 20, timeWindow: "1 minute" } } },
+    async (req, reply) => {
+      const body = req.body as CheckRequest | undefined;
+      if (!body || typeof body !== "object" || !body.transaction) {
+        return reply.code(400).send({ error: "Request body must include `transaction`." });
+      }
+      return reply.send(await analyzeTransaction(body));
+    },
+  );
 
   app.setErrorHandler((err, req, reply) => {
     if (err instanceof AnalyzeValidationError) {

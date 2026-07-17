@@ -148,6 +148,77 @@ export const KNOWN_FUNCTIONS: Record<string, { name: string; abi: Abi; category:
   },
 };
 
+// Batching / meta-transaction wrappers. A malicious approve() or
+// setApprovalForAll() rarely rides alone at the top level — it's usually one
+// call inside a multicall or a Safe execTransaction. Each entry says how to
+// pull the inner calldata(s) out of the decoded args so analyze.ts can decode
+// and run the same detectors on what's actually being executed.
+export const WRAPPER_FUNCTIONS: Record<
+  string,
+  { name: string; abi: Abi; extractInner: (args: readonly unknown[]) => `0x${string}`[] }
+> = {
+  // multicall(bytes[]) — OZ Multicall / Uniswap V2-style routers.
+  "0xac9650d8": {
+    name: "multicall",
+    abi: [
+      {
+        type: "function",
+        name: "multicall",
+        inputs: [{ name: "data", type: "bytes[]" }],
+        outputs: [{ type: "bytes[]" }],
+        stateMutability: "payable",
+      },
+    ],
+    extractInner: (args) => (args[0] as `0x${string}`[]) ?? [],
+  },
+  // multicall(uint256 deadline, bytes[]) — Uniswap V3 SwapRouter style.
+  "0x5ae401dc": {
+    name: "multicall",
+    abi: [
+      {
+        type: "function",
+        name: "multicall",
+        inputs: [
+          { name: "deadline", type: "uint256" },
+          { name: "data", type: "bytes[]" },
+        ],
+        outputs: [{ type: "bytes[]" }],
+        stateMutability: "payable",
+      },
+    ],
+    extractInner: (args) => (args[1] as `0x${string}`[]) ?? [],
+  },
+  // Gnosis/Safe execTransaction(to, value, data, operation, ...) — the actual
+  // call the Safe will make is buried in the 3rd argument.
+  "0x6a761202": {
+    name: "execTransaction",
+    abi: [
+      {
+        type: "function",
+        name: "execTransaction",
+        inputs: [
+          { name: "to", type: "address" },
+          { name: "value", type: "uint256" },
+          { name: "data", type: "bytes" },
+          { name: "operation", type: "uint8" },
+          { name: "safeTxGas", type: "uint256" },
+          { name: "baseGas", type: "uint256" },
+          { name: "gasPrice", type: "uint256" },
+          { name: "gasToken", type: "address" },
+          { name: "refundReceiver", type: "address" },
+          { name: "signatures", type: "bytes" },
+        ],
+        outputs: [{ type: "bool" }],
+        stateMutability: "payable",
+      },
+    ],
+    extractInner: (args) => {
+      const data = args[2] as `0x${string}` | undefined;
+      return data && data !== "0x" ? [data] : [];
+    },
+  },
+};
+
 // uint256 max — the de-facto "unlimited" sentinel used by wallets/dApps for
 // infinite approvals.
 export const UINT256_MAX = (1n << 256n) - 1n;
