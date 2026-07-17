@@ -303,6 +303,38 @@ table.findings code { font-size: 12px; }
 pre.code-block { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; overflow-x: auto; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.65; }
 .code-label { font-family: var(--font-mono); font-size: 11px; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 8px; }
 .pill-code { background: var(--secondary); border: 1px solid var(--border); border-radius: 5px; padding: 1px 7px; font-size: 0.88em; font-family: var(--font-mono); }
+.sub-h { font-family: var(--font-display); text-transform: uppercase; font-size: 18px; }
+
+/* ══════════════════════ Connect (tabs, plain-language flow) ══════════════════════ */
+.which-box {
+  margin-top: 24px; padding: 16px 20px; border-radius: 12px; border: 1px solid color-mix(in oklch, var(--primary) 35%, var(--border));
+  background: var(--accent-dim); font-size: 13.5px; line-height: 1.6;
+}
+.which-box b { color: var(--primary); }
+.tabs { display: inline-flex; gap: 4px; margin-top: 28px; padding: 4px; border-radius: 11px; background: var(--secondary); border: 1px solid var(--border); }
+.tab-btn {
+  border: none; background: transparent; padding: 9px 18px; border-radius: 8px; font-size: 13.5px; font-weight: 700;
+  font-family: var(--font-sans); color: var(--muted-foreground); cursor: pointer; transition: all .15s;
+}
+.tab-btn.active { background: var(--card); color: var(--foreground); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.tab-btn:not(.active):hover { color: var(--foreground); }
+.tab-panel { margin-top: 24px; }
+.tab-panel[hidden] { display: none; }
+.plain-lede { font-size: 15px; line-height: 1.6; max-width: 640px; }
+.flow-mini { margin-top: 22px; display: grid; gap: 12px; grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 860px) { .flow-mini { grid-template-columns: 1fr; } }
+.flow-step { display: flex; gap: 12px; padding: 16px; border-radius: 12px; border: 1px solid var(--border); background: var(--card); }
+.flow-step .fnum {
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 999px;
+  background: var(--primary); color: var(--primary-foreground); font-family: var(--font-display); font-weight: 700; font-size: 12.5px;
+}
+.flow-step p { margin: 0; font-size: 13px; line-height: 1.55; padding-top: 2px; }
+.tech-details { margin-top: 26px; border-top: 1px solid var(--border); padding-top: 16px; }
+.tech-details summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--muted-foreground); }
+.tech-details summary::-webkit-details-marker { display: none; }
+.tech-details summary:hover { color: var(--foreground); }
+.tech-details .chev { transition: transform .2s; }
+.tech-details[open] summary .chev { transform: rotate(180deg); }
 
 /* ══════════════════════ FAQ ══════════════════════ */
 .faq { margin-top: 32px; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; background: var(--card); }
@@ -366,8 +398,7 @@ footer.site { padding: 48px 0 60px; }
     <nav class="top-nav">
       <a href="#how">How it works</a>
       <a href="#demo">Demo</a>
-      <a href="#api">API</a>
-      <a href="#mcp">MCP</a>
+      <a href="#connect">Connect</a>
       <a href="#pricing">Pricing</a>
       <a href="#faq">FAQ</a>
     </nav>
@@ -387,7 +418,7 @@ footer.site { padding: 48px 0 60px; }
       </p>
       <div class="cta-row">
         <a class="btn btn-primary" href="#demo">Try the live demo</a>
-        <a class="btn btn-outline" href="#api">Read the API docs</a>
+        <a class="btn btn-outline" href="#connect">See how to connect</a>
       </div>
       <div class="trust-row">
         <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg> Never signs or holds keys</span>
@@ -524,17 +555,37 @@ footer.site { padding: 48px 0 60px; }
   </div>
 </section>
 
-<section id="api">
+<section id="connect">
   <div class="container">
     <div class="sec-head reveal">
-      <span class="idx">05 · REST API</span>
-      <h2>A single paid endpoint</h2>
-      <p>Free discovery routes for pricing and schema; one metered endpoint for the actual check.</p>
+      <span class="idx">05 · Connect your agent</span>
+      <h2>Two ways in, same answer</h2>
+      <p>Call it like a normal API, or point an MCP-aware agent at it directly. Either way you get back the same plain verdict: safe, or not.</p>
     </div>
-    <div class="grid2 reveal">
-      <div>
-        <p class="code-label">Request</p>
-        <pre class="code-block"><code>POST /v1/check
+
+    <div class="which-box reveal">
+      <p><strong>Which one do I want?</strong> Calling from your own code? Use the <b>REST API</b> — it's one HTTP request. Is your agent already built on a framework that speaks MCP? Point it at the <b>MCP tool</b> directly, no extra glue code.</p>
+    </div>
+
+    <div class="tabs reveal" role="tablist">
+      <button class="tab-btn active" data-tab="rest" role="tab" aria-selected="true">REST API</button>
+      <button class="tab-btn" data-tab="mcp" role="tab" aria-selected="false">MCP tool</button>
+    </div>
+
+    <div class="tab-panel reveal" data-panel="rest">
+      <p class="plain-lede">One endpoint. Send the pending transaction, get back <span class="pill-code">safe: true/false</span> and the reasons why.</p>
+      <div class="flow-mini">
+        <div class="flow-step"><span class="fnum">1</span><p>Your agent sends the transaction to <code class="pill-code">POST /v1/check</code>.</p></div>
+        <div class="flow-step"><span class="fnum">2</span><p>Haven't paid yet? You get back an <b>HTTP 402</b> with the exact price — pay it, send the same request again.</p></div>
+        <div class="flow-step"><span class="fnum">3</span><p>Paid? You get the <b>verdict</b> back: safe or blocked, with plain-language reasons.</p></div>
+      </div>
+
+      <details class="tech-details">
+        <summary>Show the raw request &amp; response <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6"/></svg></summary>
+        <div class="grid2" style="margin-top:18px;">
+          <div>
+            <p class="code-label">You send</p>
+            <pre class="code-block"><code>POST /v1/check
 Content-Type: application/json
 
 {
@@ -546,10 +597,10 @@ Content-Type: application/json
   },
   "userWallet": "0x..."
 }</code></pre>
-      </div>
-      <div>
-        <p class="code-label">Response</p>
-        <pre class="code-block"><code>{
+          </div>
+          <div>
+            <p class="code-label">You get back</p>
+            <pre class="code-block"><code>{
   "safe": false,
   "riskLevel": "high",
   "findings": [{
@@ -561,11 +612,10 @@ Content-Type: application/json
   "decoded": { "functionName": "approve" },
   "summary": "Blocked: ..."
 }</code></pre>
-      </div>
-    </div>
-
-    <p class="code-label" style="margin-top:32px;">No payment yet</p>
-    <pre class="code-block"><code>HTTP/1.1 402 Payment Required
+          </div>
+        </div>
+        <p class="code-label" style="margin-top:20px;">If you haven't paid yet, you get this instead</p>
+        <pre class="code-block"><code>HTTP/1.1 402 Payment Required
 
 {
   "x402Version": 1,
@@ -580,9 +630,39 @@ Content-Type: application/json
     "maxTimeoutSeconds": 60
   }]
 }</code></pre>
+      </details>
+    </div>
+
+    <div class="tab-panel reveal" data-panel="mcp" hidden>
+      <p class="plain-lede">Vetra also runs as a standard MCP server — the same protocol your agent framework already uses to find and call tools. Point its MCP client at <code class="pill-code">/mcp</code> and a tool called <code class="pill-code">check_transaction</code> shows up automatically.</p>
+      <div class="flow-mini">
+        <div class="flow-step"><span class="fnum">1</span><p>Your agent asks what tools are available — this is <b>always free</b>, just to look.</p></div>
+        <div class="flow-step"><span class="fnum">2</span><p>It calls the <code class="pill-code">check_transaction</code> tool with the pending transaction.</p></div>
+        <div class="flow-step"><span class="fnum">3</span><p>Haven't paid yet? Same <b>HTTP 402</b> as the REST side — pay, call again, get the verdict.</p></div>
+      </div>
+
+      <details class="tech-details">
+        <summary>Show the MCP tool listing <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6"/></svg></summary>
+        <pre class="code-block" style="margin-top:18px;"><code>// what your agent sees when it asks "what tools do you have?"
+{
+  "name": "check_transaction",
+  "description": "Analyze an EVM transaction BEFORE signing it...",
+  "inputSchema": {
+    "type": "object",
+    "required": ["transaction"],
+    "properties": {
+      "network": { "type": "string" },
+      "transaction": { "type": "object" },
+      "userWallet": { "type": "string" }
+    }
+  }
+}</code></pre>
+      </details>
+    </div>
 
     <div class="sec-head reveal" style="margin-top:48px;">
-      <h3 style="font-family:var(--font-display);text-transform:uppercase;font-size:18px;">Findings this version detects</h3>
+      <h3 class="sub-h">What it actually catches</h3>
+      <p>Same detectors, same severities, whichever way you call it.</p>
     </div>
     <table class="findings reveal">
       <thead><tr><th>Code</th><th>Severity</th><th>What it means</th></tr></thead>
@@ -601,34 +681,10 @@ Content-Type: application/json
   </div>
 </section>
 
-<section id="mcp">
-  <div class="container">
-    <div class="sec-head reveal">
-      <span class="idx">06 · Agent-to-MCP</span>
-      <h2>A real MCP server</h2>
-      <p>Model Context Protocol over Streamable HTTP at <code class="pill-code">POST /mcp</code>. <code class="pill-code">initialize</code> and <code class="pill-code">tools/list</code> are free; <code class="pill-code">tools/call</code> for <code class="pill-code">check_transaction</code> is gated by x402 at the HTTP layer, before the call ever reaches the tool.</p>
-    </div>
-    <pre class="code-block reveal"><code>// tools/list ->
-{
-  "name": "check_transaction",
-  "description": "Analyze an EVM transaction BEFORE signing it...",
-  "inputSchema": {
-    "type": "object",
-    "required": ["transaction"],
-    "properties": {
-      "network": { "type": "string" },
-      "transaction": { "type": "object" },
-      "userWallet": { "type": "string" }
-    }
-  }
-}</code></pre>
-  </div>
-</section>
-
 <section id="pricing">
   <div class="container">
     <div class="sec-head reveal">
-      <span class="idx">07 · Pricing</span>
+      <span class="idx">06 · Pricing</span>
       <h2>One price per call</h2>
       <p>Paid in USDC via x402. No subscriptions, no API keys, no accounts — an agent just pays as it goes.</p>
     </div>
@@ -655,7 +711,7 @@ Content-Type: application/json
 <section id="security">
   <div class="container">
     <div class="sec-head reveal">
-      <span class="idx">08 · Security &amp; privacy</span>
+      <span class="idx">07 · Security &amp; privacy</span>
       <h2>What runs where</h2>
       <p>You're trusting Vetra with the moment before a signature. Here's exactly what it does with it.</p>
     </div>
@@ -687,7 +743,7 @@ Content-Type: application/json
 <section id="faq">
   <div class="container-narrow">
     <div class="sec-head reveal">
-      <span class="idx">09 · FAQ</span>
+      <span class="idx">08 · FAQ</span>
       <h2>Fair questions</h2>
     </div>
     <div class="faq reveal">
@@ -728,7 +784,7 @@ Content-Type: application/json
         <p>Try the live demo, or wire the MCP tool into your agent and watch it refuse an unlimited approval in real time.</p>
         <div class="cta-row">
           <a class="btn btn-primary" href="#demo">Try the live demo</a>
-          <a class="btn btn-outline" href="#api">Read the API docs</a>
+          <a class="btn btn-outline" href="#connect">See how to connect</a>
         </div>
         <p class="fineprint">MIT licensed. x402-metered. Store review pending on OKX.AI.</p>
       </div>
@@ -752,8 +808,7 @@ Content-Type: application/json
       <div class="foot-links">
         <a href="#how">How it works</a>
         <a href="#demo">Demo</a>
-        <a href="#api">API</a>
-        <a href="#mcp">MCP</a>
+        <a href="#connect">Connect</a>
         <a href="#pricing">Pricing</a>
         <a href="/v1/mcp/tools">Tool schema</a>
         <a href="/health">Status</a>
@@ -781,6 +836,20 @@ const io = new IntersectionObserver((entries) => {
   for (const e of entries) if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
 }, { threshold: 0.12 });
 revealEls.forEach((el) => io.observe(el));
+
+// connect tabs (REST / MCP)
+document.querySelectorAll(".tab-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const target = btn.dataset.tab;
+    document.querySelectorAll(".tab-btn").forEach((b) => {
+      b.classList.toggle("active", b === btn);
+      b.setAttribute("aria-selected", b === btn ? "true" : "false");
+    });
+    document.querySelectorAll(".tab-panel").forEach((panel) => {
+      panel.hidden = panel.dataset.panel !== target;
+    });
+  });
+});
 
 // spotlight cursor tracking
 document.querySelectorAll(".spot").forEach((card) => {
