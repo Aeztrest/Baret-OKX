@@ -3,213 +3,538 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Vetra — Pre-signature transaction safety for AI agents</title>
-<meta name="description" content="Vetra is a pay-per-call API and MCP service that checks whether an EVM transaction is safe to sign, before an AI agent signs it." />
+<title>Vetra — Check it first. Then sign.</title>
+<meta name="description" content="Vetra is a pay-per-call API and MCP tool that checks whether an EVM transaction is safe to sign, before an AI agent signs it. x402-metered, no accounts." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
 <style>
+/* ══════════════════════ Design tokens ══════════════════════
+   Structure mirrors a shadcn-style token system (background / foreground /
+   card / primary / secondary / muted / border, light + dark), with Vetra's
+   own single accent: a verified-blue, not a hazard color. Semantic risk
+   states (ok / warn / bad) are universal green/amber/red, independent of
+   the brand accent. */
+:root {
+  color-scheme: light;
+  --radius: 0.625rem;
+
+  --background: oklch(0.977 0.004 84);
+  --foreground: oklch(0.205 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.205 0 0);
+
+  --primary: oklch(0.58 0.17 217);
+  --primary-foreground: oklch(0.99 0 0);
+  --accent-soft: oklch(0.50 0.16 217);
+  --accent-dim: oklch(0.58 0.17 217 / 0.10);
+  --accent-glow: oklch(0.58 0.17 217 / 0.22);
+
+  --secondary: oklch(0.967 0.004 84);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.967 0.004 84);
+  --muted-foreground: oklch(0.53 0 0);
+
+  --border: oklch(0.205 0 0 / 0.10);
+  --input: oklch(0.205 0 0 / 0.16);
+  --ring: oklch(0.58 0.17 217);
+
+  --ok: oklch(0.596 0.126 163);
+  --ok-dim: oklch(0.596 0.126 163 / 0.10);
+  --warn: oklch(0.55 0.13 55);
+  --warn-dim: oklch(0.55 0.13 55 / 0.10);
+  --bad: oklch(0.577 0.245 27.3);
+  --bad-dim: oklch(0.577 0.245 27.3 / 0.08);
+
+  --grid-line: oklch(0.205 0 0 / 0.035);
+  --spotlight: oklch(0.205 0 0 / 0.05);
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0a0e12;
-    --bg-soft: #10161c;
-    --panel: #131a21;
-    --border: #232d36;
-    --text: #e7edf2;
-    --text-dim: #93a3b1;
-    --accent: #34d399;
-    --accent-dim: #1c7a56;
-    --danger: #f87171;
-    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  }
-  @media (prefers-color-scheme: light) {
-    :root {
-      --bg: #f7f9fb;
-      --bg-soft: #ffffff;
-      --panel: #ffffff;
-      --border: #dde4ea;
-      --text: #10161c;
-      --text-dim: #55636e;
-      --accent: #0f9d68;
-      --accent-dim: #0b7a51;
-      --danger: #c0392b;
-    }
-  }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    line-height: 1.55;
-    -webkit-font-smoothing: antialiased;
-  }
-  a { color: var(--accent); text-decoration: none; }
-  a:hover { text-decoration: underline; }
-  .wrap { max-width: 920px; margin: 0 auto; padding: 0 24px; }
-  header.top {
-    border-bottom: 1px solid var(--border);
-    padding: 18px 0;
-    position: sticky; top: 0;
-    background: color-mix(in srgb, var(--bg) 88%, transparent);
-    backdrop-filter: blur(8px);
-    z-index: 10;
-  }
-  header.top .wrap { display: flex; align-items: center; justify-content: space-between; }
-  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; letter-spacing: -0.02em; }
-  .brand .mark {
-    width: 22px; height: 22px; border-radius: 6px;
-    background: linear-gradient(135deg, var(--accent), var(--accent-dim));
-    display: inline-flex; align-items: center; justify-content: center;
-    font-size: 13px; color: #06251a; font-weight: 900;
-  }
-  nav a { color: var(--text-dim); margin-left: 22px; font-size: 14px; }
-  nav a:hover { color: var(--text); text-decoration: none; }
+    color-scheme: dark;
+    --background: oklch(0.17 0.004 60);
+    --foreground: oklch(0.97 0 0);
+    --card: oklch(0.208 0.004 60);
+    --card-foreground: oklch(0.97 0 0);
 
-  .hero { padding: 88px 0 56px; }
-  .kicker {
-    display: inline-block; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
-    color: var(--accent); border: 1px solid var(--accent-dim); padding: 4px 10px; border-radius: 999px;
-    margin-bottom: 20px;
+    --primary: oklch(0.65 0.16 217);
+    --primary-foreground: oklch(0.99 0 0);
+    --accent-soft: oklch(0.70 0.15 217);
+    --accent-dim: oklch(0.65 0.16 217 / 0.16);
+    --accent-glow: oklch(0.65 0.16 217 / 0.30);
+
+    --secondary: oklch(0.27 0.004 60);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.27 0.004 60);
+    --muted-foreground: oklch(0.71 0 0);
+
+    --border: oklch(1 0 0 / 0.11);
+    --input: oklch(1 0 0 / 0.16);
+    --ring: oklch(0.65 0.16 217);
+
+    --ok: oklch(0.72 0.16 163);
+    --ok-dim: oklch(0.72 0.16 163 / 0.16);
+    --warn: oklch(0.80 0.14 70);
+    --warn-dim: oklch(0.80 0.14 70 / 0.16);
+    --bad: oklch(0.70 0.19 25);
+    --bad-dim: oklch(0.70 0.19 25 / 0.16);
+
+    --grid-line: oklch(1 0 0 / 0.045);
+    --spotlight: oklch(1 0 0 / 0.08);
   }
-  h1 { font-size: 44px; line-height: 1.12; letter-spacing: -0.03em; margin: 0 0 18px; }
-  .lede { font-size: 18px; color: var(--text-dim); max-width: 620px; margin: 0 0 32px; }
-  .cta-row { display: flex; gap: 12px; flex-wrap: wrap; }
-  .btn {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 11px 18px; border-radius: 10px; font-size: 14px; font-weight: 600;
-    border: 1px solid var(--border);
-  }
-  .btn.primary { background: var(--accent); color: #06251a; border-color: var(--accent); }
-  .btn.primary:hover { background: var(--accent-dim); text-decoration: none; }
-  .btn.ghost { color: var(--text); }
-  .btn.ghost:hover { border-color: var(--text-dim); text-decoration: none; }
+}
 
-  section { padding: 48px 0; border-top: 1px solid var(--border); }
-  h2 { font-size: 24px; letter-spacing: -0.02em; margin: 0 0 8px; }
-  .section-sub { color: var(--text-dim); margin: 0 0 28px; max-width: 620px; }
+/* ══════════════════════ Base ══════════════════════ */
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; }
+::selection { background: var(--accent-glow); }
+:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+code, .mono { font-family: var(--font-mono); }
+.container { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+.container-narrow { max-width: 860px; margin: 0 auto; padding: 0 24px; }
+section { padding: 88px 0; }
+section.tight { padding: 56px 0; }
+section + section { border-top: 1px solid var(--border); }
+h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; margin: 0; }
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.18em;
+  color: var(--muted-foreground); border: 1px solid var(--border); background: var(--card);
+  padding: 6px 12px; border-radius: 999px;
+}
+.dot { position: relative; display: inline-flex; width: 8px; height: 8px; }
+.dot::before, .dot::after {
+  content: ""; position: absolute; inset: 0; border-radius: 999px; background: var(--primary);
+}
+.dot::before { animation: ping 2s cubic-bezier(0,0,0.2,1) infinite; opacity: 0.6; }
+@keyframes ping { 75%, 100% { transform: scale(2.2); opacity: 0; } }
 
-  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-  @media (max-width: 720px) { .steps { grid-template-columns: 1fr; } }
-  .step {
-    background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 20px;
-  }
-  .step .n {
-    font-family: var(--mono); font-size: 12px; color: var(--accent); margin-bottom: 10px;
-  }
-  .step h3 { font-size: 16px; margin: 0 0 8px; }
-  .step p { font-size: 14px; color: var(--text-dim); margin: 0; }
+/* backdrop */
+.backdrop {
+  position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background-image: radial-gradient(var(--grid-line) 1px, transparent 1px);
+  background-size: 22px 22px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, #000 20%, transparent 75%);
+  mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, #000 20%, transparent 75%);
+}
 
-  pre {
-    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
-    padding: 18px; overflow-x: auto; font-family: var(--mono); font-size: 13px; line-height: 1.6;
-  }
-  code { font-family: var(--mono); }
-  .inline-code { background: var(--bg-soft); border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; font-size: 0.9em; }
+/* ══════════════════════ Header ══════════════════════ */
+header.top {
+  position: sticky; top: 0; z-index: 50;
+  border-bottom: 1px solid transparent;
+  transition: background-color .25s, border-color .25s;
+}
+header.top.scrolled {
+  background: color-mix(in oklch, var(--background) 82%, transparent);
+  backdrop-filter: blur(14px);
+  border-bottom-color: var(--border);
+}
+header.top .bar { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand .word { font-family: var(--font-display); font-weight: 700; letter-spacing: 0.1em; font-size: 14px; }
+.brand .word .dotchar { color: var(--primary); }
+nav.top-nav { display: flex; align-items: center; gap: 4px; }
+nav.top-nav a {
+  padding: 8px 14px; border-radius: 8px; font-size: 13.5px; font-weight: 600; color: var(--muted-foreground);
+  transition: color .2s, background-color .2s;
+}
+nav.top-nav a:hover { color: var(--foreground); background: var(--secondary); }
+.header-cta {
+  display: none; align-items: center; gap: 6px; background: var(--primary); color: var(--primary-foreground);
+  padding: 9px 16px; border-radius: 8px; font-size: 13.5px; font-weight: 700;
+  box-shadow: 0 6px 18px -6px var(--accent-glow);
+}
+.header-cta:hover { background: var(--accent-soft); }
+@media (min-width: 640px) { .header-cta { display: inline-flex; } }
+@media (max-width: 780px) { nav.top-nav { display: none; } }
 
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
+/* ══════════════════════ Buttons ══════════════════════ */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; padding: 13px 22px; border-radius: 9px;
+  font-size: 14px; font-weight: 700; border: 1px solid var(--border); transition: all .2s; cursor: pointer;
+}
+.btn-primary { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); box-shadow: 0 8px 22px -8px var(--accent-glow); }
+.btn-primary:hover { background: var(--accent-soft); transform: translateY(-1px); }
+.btn-outline { background: var(--card); color: var(--foreground); }
+.btn-outline:hover { border-color: color-mix(in oklch, var(--foreground) 35%, transparent); background: var(--secondary); }
 
-  table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
-  th { color: var(--text-dim); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
-  .sev { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
-  .sev.low { background: #1f2a33; color: #8fb8d6; }
-  .sev.medium { background: #3a2e14; color: #f0b94d; }
-  .sev.high { background: #3a1a1a; color: #f87171; }
-  .sev.critical { background: #470f0f; color: #ff8080; }
+/* ══════════════════════ Hero ══════════════════════ */
+.hero { padding: 116px 0 64px; border-top: none !important; overflow: hidden; }
+.hero-grid { display: grid; gap: 48px; align-items: center; grid-template-columns: 1fr; }
+@media (min-width: 980px) { .hero-grid { grid-template-columns: 1.15fr 1fr; gap: 56px; } }
+h1.display {
+  margin-top: 22px; font-size: clamp(2.4rem, 6.2vw, 4.4rem); font-weight: 700; text-transform: uppercase;
+  line-height: 0.98; letter-spacing: -0.03em;
+}
+h1.display .accent { color: var(--primary); }
+.lede { margin-top: 22px; max-width: 560px; font-size: 17px; line-height: 1.65; color: var(--muted-foreground); }
+.cta-row { margin-top: 30px; display: flex; flex-wrap: wrap; gap: 12px; }
+.trust-row { margin-top: 34px; display: flex; flex-wrap: wrap; gap: 10px 22px; font-size: 12.5px; color: var(--muted-foreground); }
+.trust-row span { display: inline-flex; align-items: center; gap: 6px; }
+.trust-row svg { color: var(--primary); flex-shrink: 0; }
 
-  .demo-box { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
-  .demo-controls { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
-  select, button.run {
-    background: var(--bg-soft); color: var(--text); border: 1px solid var(--border);
-    border-radius: 8px; padding: 9px 12px; font-size: 13px; font-family: var(--sans);
-  }
-  button.run { background: var(--accent); color: #06251a; font-weight: 700; border-color: var(--accent); cursor: pointer; }
-  button.run:hover { background: var(--accent-dim); }
-  #demo-result { margin-top: 14px; min-height: 24px; }
-  .badge { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; padding: 8px 14px; border-radius: 10px; font-size: 14px; margin-bottom: 12px; }
-  .badge.safe { background: #10291f; color: var(--accent); }
-  .badge.unsafe { background: #2f1414; color: var(--danger); }
+/* popup mockup */
+.mockup { border-radius: 18px; border: 1px solid var(--border); background: var(--card); overflow: hidden; box-shadow: 0 24px 60px -24px rgba(0,0,0,0.35); max-width: 380px; margin: 0 auto; }
+.mockup-bar { height: 5px; background: var(--primary); }
+.mockup-head { display: flex; align-items: center; justify-content: space-between; padding: 11px 16px; border-bottom: 1px solid var(--border); }
+.mockup-live { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 10.5px; color: var(--muted-foreground); }
+.mockup-live .dot::before, .mockup-live .dot::after { background: var(--primary); }
+.mockup-addr { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted-foreground); }
+.mockup-body { padding: 16px; }
+.mockup-caller { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 11px; color: var(--bad); margin-bottom: 4px; }
+.mockup-title { font-size: 16px; font-weight: 700; }
+.verdict { display: flex; gap: 12px; margin: 14px 16px 0; padding: 14px; border-radius: 12px; }
+.verdict.bad { background: var(--bad-dim); border: 1px solid color-mix(in oklch, var(--bad) 45%, transparent); }
+.verdict.ok { background: var(--ok-dim); border: 1px solid color-mix(in oklch, var(--ok) 45%, transparent); }
+.verdict svg { flex-shrink: 0; margin-top: 2px; }
+.verdict.bad svg, .verdict.bad .verdict-head { color: var(--bad); }
+.verdict.ok svg, .verdict.ok .verdict-head { color: var(--ok); }
+.verdict-head { font-weight: 700; font-size: 14px; }
+.verdict ul { margin: 7px 0 0; padding: 0; list-style: none; font-size: 11.5px; color: var(--muted-foreground); }
+.verdict li { padding: 2px 0; line-height: 1.5; }
+.mockup-actions { display: flex; gap: 8px; padding: 14px 16px; background: var(--bad-dim); border-top: 1px solid color-mix(in oklch, var(--bad) 40%, transparent); }
+.mockup-actions .decline { flex: 1; text-align: center; padding: 9px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); font-size: 12.5px; font-weight: 700; }
+.mockup-actions .anyway { flex: 1; text-align: center; padding: 9px; border-radius: 8px; background: var(--bad); color: #fff; font-size: 12.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px; }
 
-  footer { padding: 40px 0 80px; color: var(--text-dim); font-size: 13px; }
-  footer a { color: var(--text-dim); }
-  .foot-links a { margin-right: 18px; }
+/* ══════════════════════ Marquee ══════════════════════ */
+.marquee-wrap { position: relative; overflow: hidden; padding: 20px 0; background: var(--secondary); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.marquee-wrap::before, .marquee-wrap::after {
+  content: ""; position: absolute; top: 0; bottom: 0; width: 90px; z-index: 2;
+}
+.marquee-wrap::before { left: 0; background: linear-gradient(90deg, var(--background), transparent); }
+.marquee-wrap::after { right: 0; background: linear-gradient(-90deg, var(--background), transparent); }
+.marquee-track { display: flex; gap: 40px; white-space: nowrap; width: max-content; animation: marquee 32s linear infinite; }
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.marquee-track span { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 13px; color: var(--muted-foreground); }
+.marquee-track svg { color: var(--primary); }
+@media (prefers-reduced-motion: reduce) { .marquee-track { animation: none; flex-wrap: wrap; } }
+
+/* ══════════════════════ Section heading ══════════════════════ */
+.sec-head { display: flex; flex-direction: column; gap: 10px; max-width: 640px; }
+.sec-head .idx { font-family: var(--font-mono); font-size: 11px; color: var(--primary); letter-spacing: 0.1em; }
+.sec-head h2 { font-size: 28px; text-transform: uppercase; }
+.sec-head p { color: var(--muted-foreground); margin: 0; font-size: 14.5px; }
+.sec-head-row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 20px; }
+
+/* ══════════════════════ Cards / grids ══════════════════════ */
+.grid3 { display: grid; gap: 16px; grid-template-columns: repeat(3, 1fr); margin-top: 40px; }
+.grid2 { display: grid; gap: 16px; grid-template-columns: repeat(2, 1fr); margin-top: 40px; }
+@media (max-width: 860px) { .grid3, .grid2 { grid-template-columns: 1fr; } }
+
+.spot { position: relative; border-radius: 14px; border: 1px solid var(--border); background: var(--card); overflow: hidden; transition: border-color .2s; }
+.spot::before {
+  content: ""; position: absolute; inset: 0; opacity: 0; transition: opacity .3s; pointer-events: none;
+  background: radial-gradient(340px circle at var(--mx, 50%) var(--my, 50%), var(--spotlight), transparent 60%);
+}
+.spot:hover::before { opacity: 1; }
+.spot:hover { border-color: color-mix(in oklch, var(--foreground) 20%, var(--border)); }
+.spot-pad { position: relative; padding: 26px; }
+
+.pillar-num { font-family: var(--font-display); font-weight: 700; font-size: 13px; color: var(--primary); }
+.pillar > svg:first-child { color: var(--primary); display: block; }
+.pillar h3 { margin-top: 14px; font-size: 18px; text-transform: uppercase; }
+.pillar p { margin-top: 10px; font-size: 13.5px; color: var(--muted-foreground); line-height: 1.6; }
+.pillar ul { margin: 16px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.pillar li { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; }
+.pillar li::before { content: ""; width: 6px; height: 6px; border-radius: 2px; background: var(--primary); flex-shrink: 0; }
+.pillar-meta { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); font-family: var(--font-mono); font-size: 12px; color: var(--muted-foreground); }
+.pillar-meta b { color: var(--primary); font-size: 15px; }
+
+/* ══════════════════════ Demo ══════════════════════ */
+.demo-panel { margin-top: 32px; border-radius: 16px; border: 1px solid var(--border); background: var(--card); padding: 24px; }
+.demo-controls { display: flex; flex-wrap: wrap; gap: 10px; }
+select, button.run {
+  background: var(--secondary); color: var(--foreground); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 14px; font-size: 13px; font-family: var(--font-sans); font-weight: 600;
+}
+button.run { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); cursor: pointer; font-weight: 700; }
+button.run:hover { background: var(--accent-soft); }
+#demo-result { margin-top: 18px; }
+.raw-toggle summary { cursor: pointer; font-family: var(--font-mono); font-size: 11.5px; color: var(--muted-foreground); margin-top: 12px; }
+pre.raw { margin-top: 8px; background: var(--secondary); border: 1px solid var(--border); border-radius: 10px; padding: 14px; overflow-x: auto; font-size: 12px; }
+
+/* ══════════════════════ Stats ══════════════════════ */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; background: var(--border); gap: 1px; margin-top: 8px; }
+.stats .cell { background: var(--card); padding: 32px 16px; text-align: center; }
+.stats .cell b { display: block; font-family: var(--font-display); font-size: 30px; color: var(--primary); }
+.stats .cell span { display: block; margin-top: 6px; font-size: 12px; color: var(--muted-foreground); }
+@media (max-width: 700px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+
+/* ══════════════════════ Compare ══════════════════════ */
+.compare { margin-top: 36px; display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+@media (max-width: 780px) { .compare { grid-template-columns: 1fr; } }
+.compare .col { padding: 26px; }
+.compare .col.left { background: var(--secondary); }
+.compare .col.right { background: color-mix(in oklch, var(--primary) 6%, var(--card)); border-left: 1px solid var(--border); }
+@media (max-width: 780px) { .compare .col.right { border-left: none; border-top: 1px solid var(--border); } }
+.compare-label { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700; }
+.compare .col.right .compare-label { color: var(--primary); }
+.compare-row { padding: 14px 0; border-top: 1px solid var(--border); }
+.compare-row:first-child { border-top: none; padding-top: 0; }
+.compare-row .rlabel { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted-foreground); }
+.compare-row p { margin: 5px 0 0; font-size: 13.5px; line-height: 1.55; }
+
+/* ══════════════════════ Table (findings) ══════════════════════ */
+table.findings { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-top: 32px; }
+table.findings th, table.findings td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+table.findings th { font-family: var(--font-mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted-foreground); }
+table.findings code { font-size: 12px; }
+.sev { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.sev.low { background: var(--secondary); color: var(--muted-foreground); }
+.sev.medium { background: var(--warn-dim); color: var(--warn); }
+.sev.high { background: var(--bad-dim); color: var(--bad); }
+.sev.critical { background: var(--bad); color: #fff; }
+
+/* ══════════════════════ Code blocks ══════════════════════ */
+pre.code-block { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; overflow-x: auto; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.65; }
+.code-label { font-family: var(--font-mono); font-size: 11px; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 8px; }
+.pill-code { background: var(--secondary); border: 1px solid var(--border); border-radius: 5px; padding: 1px 7px; font-size: 0.88em; font-family: var(--font-mono); }
+
+/* ══════════════════════ FAQ ══════════════════════ */
+.faq { margin-top: 32px; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; background: var(--card); }
+.faq details { border-top: 1px solid var(--border); }
+.faq details:first-child { border-top: none; }
+.faq summary { list-style: none; cursor: pointer; padding: 18px 22px; display: flex; align-items: center; justify-content: space-between; gap: 16px; font-weight: 700; font-size: 14px; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary .chev { transition: transform .2s; color: var(--muted-foreground); flex-shrink: 0; }
+.faq details[open] summary .chev { transform: rotate(180deg); }
+.faq summary:hover { background: var(--secondary); }
+.faq .answer { padding: 0 22px 20px; font-size: 13.5px; color: var(--muted-foreground); line-height: 1.6; }
+
+/* ══════════════════════ Final CTA ══════════════════════ */
+.final-cta { border-radius: 22px; position: relative; overflow: hidden; padding: 64px 40px; background: oklch(0.17 0.004 60); color: oklch(0.97 0 0); border: 1px solid oklch(1 0 0 / 0.1); }
+.final-cta::before {
+  content: ""; position: absolute; inset: 0; opacity: 0.5;
+  background-image: linear-gradient(oklch(1 0 0 / 0.05) 1px, transparent 1px), linear-gradient(90deg, oklch(1 0 0 / 0.05) 1px, transparent 1px);
+  background-size: 44px 44px;
+  -webkit-mask-image: radial-gradient(ellipse at 100% 100%, #000 10%, transparent 70%);
+  mask-image: radial-gradient(ellipse at 100% 100%, #000 10%, transparent 70%);
+}
+.final-cta .inner { position: relative; max-width: 620px; }
+.final-cta h2 { font-size: clamp(2rem, 5vw, 3rem); text-transform: uppercase; line-height: 1; }
+.final-cta h2 .accent { color: var(--primary); }
+.final-cta p { margin-top: 18px; color: oklch(0.8 0 0); font-size: 16px; }
+.final-cta .cta-row { margin-top: 30px; }
+.final-cta .fineprint { margin-top: 24px; font-size: 12px; color: oklch(0.62 0 0); }
+.final-cta .btn-outline { background: transparent; border-color: oklch(1 0 0 / 0.18); color: #fff; }
+.final-cta .btn-outline:hover { border-color: oklch(1 0 0 / 0.4); background: oklch(1 0 0 / 0.06); }
+
+/* ══════════════════════ Footer ══════════════════════ */
+footer.site { padding: 48px 0 60px; }
+.foot-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px; }
+.foot-brand { display: flex; align-items: center; gap: 12px; }
+.foot-tagline { margin: 2px 0 0; font-size: 12px; color: var(--muted-foreground); }
+.foot-links { display: flex; flex-wrap: wrap; gap: 4px; }
+.foot-links a { padding: 7px 12px; border-radius: 7px; font-size: 12.5px; color: var(--muted-foreground); }
+.foot-links a:hover { background: var(--secondary); color: var(--foreground); }
+.foot-bottom { margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--border); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; font-size: 11.5px; color: var(--muted-foreground); }
+.foot-bottom .live { display: inline-flex; align-items: center; gap: 7px; }
+.foot-bottom .live .dot::before, .foot-bottom .live .dot::after { background: var(--ok); }
+
+/* ══════════════════════ Reveal ══════════════════════ */
+.reveal { opacity: 0; transform: translateY(14px); transition: opacity .6s ease, transform .6s ease; }
+.reveal.in { opacity: 1; transform: translateY(0); }
 </style>
 </head>
 <body>
 
-<header class="top">
-  <div class="wrap">
-    <div class="brand"><span class="mark">V</span> Vetra</div>
-    <nav>
+<div class="backdrop" aria-hidden="true"></div>
+
+<header class="top" id="site-header">
+  <div class="container bar">
+    <a href="#" class="brand">
+      <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">
+        <rect width="32" height="32" rx="8" fill="var(--foreground)" />
+        <path d="M9 16.5l4.5 4.5L23 11" stroke="var(--primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+      </svg>
+      <span class="word">VETRA<span class="dotchar">.</span></span>
+    </a>
+    <nav class="top-nav">
       <a href="#how">How it works</a>
       <a href="#demo">Demo</a>
       <a href="#api">API</a>
       <a href="#mcp">MCP</a>
       <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
     </nav>
+    <a class="header-cta" href="#demo">Try the demo →</a>
   </div>
 </header>
 
-<div class="wrap">
-  <section class="hero" style="border-top: none;">
-    <span class="kicker">Agent-to-MCP · x402 paid endpoint</span>
-    <h1>A safety check your agent<br/>can call before it signs.</h1>
-    <p class="lede">
-      Vetra is a pay-per-call API that inspects an EVM transaction <strong>before</strong> it gets signed —
-      unlimited approvals, blanket NFT operator grants, off-chain permits, proxy-upgrade and ownership calls,
-      insufficient balance, blocklist hits. One call, one price, an answer: <code class="inline-code">safe: true</code>
-      or <code class="inline-code">safe: false</code> with reasons.
-    </p>
-    <div class="cta-row">
-      <a class="btn primary" href="#demo">Try the live demo</a>
-      <a class="btn ghost" href="#api">Read the API docs</a>
-    </div>
-  </section>
-
-  <section id="how">
-    <h2>How it works</h2>
-    <p class="section-sub">Vetra never signs, never holds keys, and never submits anything on-chain. It only answers one question: is this transaction safe to sign?</p>
-    <div class="steps">
-      <div class="step">
-        <div class="n">01</div>
-        <h3>Agent calls Vetra</h3>
-        <p>Before signing, an agent sends the pending transaction (raw hex, or a <code class="inline-code">{to, value, data}</code> object) to Vetra's MCP tool or REST endpoint.</p>
+<section class="hero">
+  <div class="container hero-grid">
+    <div>
+      <span class="eyebrow"><span class="dot"></span> Live · x402-metered · Agent-to-MCP</span>
+      <h1 class="display">Check it first.<br /><span class="accent">Then sign.</span></h1>
+      <p class="lede">
+        Vetra decodes an EVM transaction before it's signed — unlimited approvals, blanket NFT operator
+        grants, off-chain permits, proxy upgrades, ownership transfers — and hands back a verdict in plain
+        language. One call, one small price in USDC, no account to create.
+      </p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="#demo">Try the live demo</a>
+        <a class="btn btn-outline" href="#api">Read the API docs</a>
       </div>
-      <div class="step">
-        <div class="n">02</div>
+      <div class="trust-row">
+        <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg> Never signs or holds keys</span>
+        <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg> Findings in plain language</span>
+        <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M13 2 3 14h8l-1 8 10-12h-8l1-8Z"/></svg> Pay per call, no API key</span>
+        <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20Z"/></svg> Any EVM chain</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="mockup">
+        <div class="mockup-bar"></div>
+        <div class="mockup-head">
+          <span class="mockup-live"><span class="dot"></span> eip155:8453</span>
+          <span class="mockup-addr">0xA0b8…eB48</span>
+        </div>
+        <div class="mockup-body">
+          <div class="mockup-caller"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg> unknown-spender.eth</div>
+          <p class="mockup-title">Sign transaction</p>
+        </div>
+        <div class="verdict bad">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9.5 9.5 5 5m0-5-5 5"/></svg>
+          <div>
+            <p class="verdict-head">Blocked — unsafe to sign</p>
+            <ul>
+              <li>· Grants an effectively unlimited ERC-20 allowance</li>
+              <li>· Spender contract has no verified history</li>
+            </ul>
+          </div>
+        </div>
+        <div class="mockup-actions">
+          <span class="decline">Decline</span>
+          <span class="anyway"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg> Sign anyway</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="marquee-wrap">
+  <div class="marquee-track" id="marquee"></div>
+</div>
+
+<section id="how">
+  <div class="container">
+    <div class="sec-head reveal">
+      <span class="idx">01 · How it works</span>
+      <h2>Three steps, one verdict</h2>
+      <p>Vetra never signs, holds keys, or submits anything on-chain. It only answers one question: is this transaction safe to sign?</p>
+    </div>
+    <div class="grid3">
+      <div class="spot reveal"><div class="spot-pad pillar">
+        <span class="pillar-num">01</span>
+        <h3>Decode &amp; check</h3>
+        <p>Vetra decodes the calldata against known ERC-20/721/1155 and proxy signatures, then checks live on-chain state — contract code, balances — via RPC.</p>
+        <ul><li>4-byte selector match</li><li>On-chain state check</li><li>No signing, no custody</li></ul>
+      </div></div>
+      <div class="spot reveal"><div class="spot-pad pillar">
+        <span class="pillar-num">02</span>
         <h3>x402 pays per call</h3>
-        <p>The call is metered with <a href="https://www.x402.org" target="_blank" rel="noopener">x402</a>: no payment header → HTTP 402 with the price; a valid USDC payment → the check runs.</p>
-      </div>
-      <div class="step">
-        <div class="n">03</div>
+        <p>Every call is metered with the x402 protocol: no payment header → HTTP 402 with the price; a valid USDC payment → the check runs and settles.</p>
+        <ul><li>Pay per call in USDC</li><li>No accounts, no API keys</li><li>Standard x402 v1</li></ul>
+        <div class="pillar-meta"><b>$0.01</b> per check_transaction call</div>
+      </div></div>
+      <div class="spot reveal"><div class="spot-pad pillar">
+        <span class="pillar-num">03</span>
         <h3>Agent gets a verdict</h3>
-        <p>Vetra decodes the calldata, checks approvals and privileged calls on-chain, and returns <code class="inline-code">safe</code>, a risk level, and human-readable findings.</p>
-      </div>
+        <p>The agent gets safe/unsafe, a risk level, and human-readable reasons — decode it once in code, decide every time.</p>
+        <ul><li>Machine-readable JSON</li><li>Plain-language reasons</li><li>MCP tool + REST</li></ul>
+      </div></div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <section id="demo">
-    <h2>Live demo</h2>
-    <p class="section-sub">Runs against this server's own <code class="inline-code">/v1/check</code> endpoint (payment gate bypassed for the two canned examples below — a real call requires x402 payment).</p>
-    <div class="demo-box">
+<section id="demo">
+  <div class="container">
+    <div class="sec-head reveal">
+      <span class="idx">02 · Try it</span>
+      <h2>Live demo</h2>
+      <p>Runs against this server's own analysis engine (unmetered here — a real call to <code class="pill-code">/v1/check</code> or the MCP tool requires x402 payment).</p>
+    </div>
+    <div class="demo-panel reveal">
       <div class="demo-controls">
         <select id="demo-select">
-          <option value="unlimited">Unlimited ERC-20 approval (unsafe)</option>
-          <option value="safe">Plain native transfer to an EOA (safe)</option>
+          <option value="unlimited">Unlimited ERC-20 approval — unsafe</option>
+          <option value="setApprovalForAll">setApprovalForAll grant — unsafe</option>
+          <option value="safe">Plain native transfer to an EOA — safe</option>
         </select>
         <button class="run" id="demo-run">Run check</button>
       </div>
       <div id="demo-result"></div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <section id="api">
-    <h2>REST API</h2>
-    <p class="section-sub">A single paid endpoint. Free discovery endpoints for pricing and schema.</p>
+<section>
+  <div class="container">
+    <div class="sec-head reveal">
+      <span class="idx">03 · By the numbers</span>
+      <h2>What ships today</h2>
+    </div>
+    <div class="stats reveal">
+      <div class="cell"><b>9</b><span>Risk detectors</span></div>
+      <div class="cell"><b>$0.01</b><span>Per check, in USDC</span></div>
+      <div class="cell"><b>2</b><span>Interfaces — REST &amp; MCP</span></div>
+      <div class="cell"><b>1</b><span>Open payment protocol (x402)</span></div>
+    </div>
+  </div>
+</section>
 
-    <div class="grid2">
+<section>
+  <div class="container">
+    <div class="sec-head reveal">
+      <span class="idx">04 · Side by side</span>
+      <h2>The same signature, two agents</h2>
+      <p>No wallet or agent framework is bashed here. This is what changes when a pre-sign check sits between the app and the keys.</p>
+    </div>
+    <div class="compare reveal">
+      <div class="col left">
+        <p class="compare-label">Without Vetra</p>
+        <div class="compare-row"><p class="rlabel">Before signing</p><p>A hex blob and a sign prompt. The agent trusts the calldata blindly.</p></div>
+        <div class="compare-row"><p class="rlabel">Unlimited approvals</p><p>Granted silently, live forever until someone remembers to revoke them.</p></div>
+        <div class="compare-row"><p class="rlabel">Proxy upgrades</p><p>Look identical to any other contract call.</p></div>
+        <div class="compare-row"><p class="rlabel">Paying for a check</p><p>Needs an account, an API key, a subscription.</p></div>
+      </div>
+      <div class="col right">
+        <p class="compare-label">With Vetra</p>
+        <div class="compare-row"><p class="rlabel">Before signing</p><p>Decoded calldata, on-chain checks, and a verdict — before signing.</p></div>
+        <div class="compare-row"><p class="rlabel">Unlimited approvals</p><p>Flagged high-severity the moment the call is decoded.</p></div>
+        <div class="compare-row"><p class="rlabel">Proxy upgrades</p><p>Flagged critical — new code, new owner, same address.</p></div>
+        <div class="compare-row"><p class="rlabel">Paying for a check</p><p>Pay per call in USDC via x402. Nothing to provision.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="api">
+  <div class="container">
+    <div class="sec-head reveal">
+      <span class="idx">05 · REST API</span>
+      <h2>A single paid endpoint</h2>
+      <p>Free discovery routes for pricing and schema; one metered endpoint for the actual check.</p>
+    </div>
+    <div class="grid2 reveal">
       <div>
-        <h3 style="font-size:14px;color:var(--text-dim);margin:0 0 8px;">Request</h3>
-        <pre><code>POST /v1/check
+        <p class="code-label">Request</p>
+        <pre class="code-block"><code>POST /v1/check
 Content-Type: application/json
 
 {
@@ -223,26 +548,24 @@ Content-Type: application/json
 }</code></pre>
       </div>
       <div>
-        <h3 style="font-size:14px;color:var(--text-dim);margin:0 0 8px;">Response</h3>
-        <pre><code>{
+        <p class="code-label">Response</p>
+        <pre class="code-block"><code>{
   "safe": false,
   "riskLevel": "high",
-  "findings": [
-    {
-      "code": "ERC20_APPROVAL_UNLIMITED",
-      "severity": "high",
-      "message": "..."
-    }
-  ],
+  "findings": [{
+    "code": "ERC20_APPROVAL_UNLIMITED",
+    "severity": "high",
+    "message": "..."
+  }],
   "reasons": ["..."],
-  "decoded": { "functionName": "approve", "isContract": false },
+  "decoded": { "functionName": "approve" },
   "summary": "Blocked: ..."
 }</code></pre>
       </div>
     </div>
 
-    <h3 style="font-size:16px;margin:28px 0 12px;">No payment yet</h3>
-    <pre><code>HTTP/1.1 402 Payment Required
+    <p class="code-label" style="margin-top:32px;">No payment yet</p>
+    <pre class="code-block"><code>HTTP/1.1 402 Payment Required
 
 {
   "x402Version": 1,
@@ -253,33 +576,39 @@ Content-Type: application/json
     "asset": "0x8335...02913",
     "payTo": "0xYourReceivingAddress",
     "amount": "10000",
-    "maxAmountRequired": "10000",
     "resource": "/v1/check",
     "maxTimeoutSeconds": 60
   }]
 }</code></pre>
 
-    <h3 style="font-size:16px;margin:28px 0 12px;">Findings this version detects</h3>
-    <table>
+    <div class="sec-head reveal" style="margin-top:48px;">
+      <h3 style="font-family:var(--font-display);text-transform:uppercase;font-size:18px;">Findings this version detects</h3>
+    </div>
+    <table class="findings reveal">
       <thead><tr><th>Code</th><th>Severity</th><th>What it means</th></tr></thead>
       <tbody>
-        <tr><td>ERC20_APPROVAL_UNLIMITED</td><td><span class="sev high">high</span></td><td>An approve/increaseAllowance grants an effectively unlimited spend allowance.</td></tr>
-        <tr><td>SET_APPROVAL_FOR_ALL</td><td><span class="sev high">high</span></td><td>setApprovalForAll grants an operator control of an entire NFT collection.</td></tr>
-        <tr><td>PERMIT_SIGNATURE_DETECTED</td><td><span class="sev medium">medium/high</span></td><td>An EIP-2612 permit applies an off-chain-signed allowance on-chain.</td></tr>
-        <tr><td>PROXY_UPGRADE_DETECTED</td><td><span class="sev critical">critical</span></td><td>upgradeTo/upgradeToAndCall swaps a proxy's implementation contract.</td></tr>
-        <tr><td>PROXY_ADMIN_CHANGE_DETECTED</td><td><span class="sev critical">critical</span></td><td>changeAdmin reassigns who can upgrade a proxy.</td></tr>
-        <tr><td>OWNERSHIP_TRANSFER_DETECTED</td><td><span class="sev high">high</span></td><td>transferOwnership hands control of a contract to a new address.</td></tr>
-        <tr><td>INSUFFICIENT_BALANCE</td><td><span class="sev high">high</span></td><td>Transaction value exceeds the sender's current on-chain balance.</td></tr>
-        <tr><td>ADDRESS_ON_BLOCKLIST</td><td><span class="sev critical">critical</span></td><td>Counterparty matches a configured threat-intel feed.</td></tr>
-        <tr><td>NATIVE_TRANSFER_TO_CONTRACT_NO_DATA</td><td><span class="sev low">low</span></td><td>Sends native value to a contract with empty calldata — can revert or strand funds.</td></tr>
+        <tr><td><code>ERC20_APPROVAL_UNLIMITED</code></td><td><span class="sev high">high</span></td><td>An approve/increaseAllowance grants an effectively unlimited spend allowance.</td></tr>
+        <tr><td><code>SET_APPROVAL_FOR_ALL</code></td><td><span class="sev high">high</span></td><td>setApprovalForAll grants an operator control of an entire NFT collection.</td></tr>
+        <tr><td><code>PERMIT_SIGNATURE_DETECTED</code></td><td><span class="sev medium">medium/high</span></td><td>An EIP-2612 permit applies an off-chain-signed allowance on-chain.</td></tr>
+        <tr><td><code>PROXY_UPGRADE_DETECTED</code></td><td><span class="sev critical">critical</span></td><td>upgradeTo/upgradeToAndCall swaps a proxy's implementation contract.</td></tr>
+        <tr><td><code>PROXY_ADMIN_CHANGE_DETECTED</code></td><td><span class="sev critical">critical</span></td><td>changeAdmin reassigns who can upgrade a proxy.</td></tr>
+        <tr><td><code>OWNERSHIP_TRANSFER_DETECTED</code></td><td><span class="sev high">high</span></td><td>transferOwnership hands control of a contract to a new address.</td></tr>
+        <tr><td><code>INSUFFICIENT_BALANCE</code></td><td><span class="sev high">high</span></td><td>Transaction value exceeds the sender's current on-chain balance.</td></tr>
+        <tr><td><code>ADDRESS_ON_BLOCKLIST</code></td><td><span class="sev critical">critical</span></td><td>Counterparty matches a configured threat-intel feed.</td></tr>
+        <tr><td><code>NATIVE_TRANSFER_TO_CONTRACT_NO_DATA</code></td><td><span class="sev low">low</span></td><td>Sends native value to a contract with empty calldata — can revert or strand funds.</td></tr>
       </tbody>
     </table>
-  </section>
+  </div>
+</section>
 
-  <section id="mcp">
-    <h2>MCP (Agent-to-MCP)</h2>
-    <p class="section-sub">A real <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">Model Context Protocol</a> server over Streamable HTTP at <code class="inline-code">POST /mcp</code>. <code class="inline-code">initialize</code> and <code class="inline-code">tools/list</code> are free; <code class="inline-code">tools/call</code> for <code class="inline-code">check_transaction</code> is gated by x402 at the HTTP layer, before the call ever reaches the tool.</p>
-    <pre><code>// tools/list ->
+<section id="mcp">
+  <div class="container">
+    <div class="sec-head reveal">
+      <span class="idx">06 · Agent-to-MCP</span>
+      <h2>A real MCP server</h2>
+      <p>Model Context Protocol over Streamable HTTP at <code class="pill-code">POST /mcp</code>. <code class="pill-code">initialize</code> and <code class="pill-code">tools/list</code> are free; <code class="pill-code">tools/call</code> for <code class="pill-code">check_transaction</code> is gated by x402 at the HTTP layer, before the call ever reaches the tool.</p>
+    </div>
+    <pre class="code-block reveal"><code>// tools/list ->
 {
   "name": "check_transaction",
   "description": "Analyze an EVM transaction BEFORE signing it...",
@@ -293,63 +622,217 @@ Content-Type: application/json
     }
   }
 }</code></pre>
-  </section>
+  </div>
+</section>
 
-  <section id="pricing">
-    <h2>Pricing</h2>
-    <p class="section-sub">One price per call, paid in USDC via x402. No subscriptions, no API keys, no accounts — an agent just pays as it goes.</p>
-    <div class="steps">
-      <div class="step">
-        <div class="n">$0.01</div>
+<section id="pricing">
+  <div class="container">
+    <div class="sec-head reveal">
+      <span class="idx">07 · Pricing</span>
+      <h2>One price per call</h2>
+      <p>Paid in USDC via x402. No subscriptions, no API keys, no accounts — an agent just pays as it goes.</p>
+    </div>
+    <div class="grid3 reveal">
+      <div class="spot"><div class="spot-pad pillar">
+        <span class="pillar-num">$0.01</span>
         <h3>per check</h3>
-        <p>Default price for <code class="inline-code">POST /v1/check</code> and the <code class="inline-code">check_transaction</code> MCP tool. Configurable per deployment.</p>
-      </div>
-      <div class="step">
-        <div class="n">$0.00</div>
+        <p>Default price for <code class="pill-code">POST /v1/check</code> and the <code class="pill-code">check_transaction</code> MCP tool. Configurable per deployment.</p>
+      </div></div>
+      <div class="spot"><div class="spot-pad pillar">
+        <span class="pillar-num">$0.00</span>
         <h3>discovery</h3>
-        <p><code class="inline-code">GET /v1/mcp/tools</code>, MCP <code class="inline-code">tools/list</code>, and <code class="inline-code">GET /health</code> are always free.</p>
-      </div>
-      <div class="step">
-        <div class="n">EVM</div>
+        <p><code class="pill-code">GET /v1/mcp/tools</code>, MCP <code class="pill-code">tools/list</code>, and <code class="pill-code">GET /health</code> are always free.</p>
+      </div></div>
+      <div class="spot"><div class="spot-pad pillar">
+        <span class="pillar-num">EVM</span>
         <h3>any chain</h3>
-        <p>Ethereum, Base, Polygon, and more — pass <code class="inline-code">network</code> as an <code class="inline-code">eip155:&lt;chainId&gt;</code> id.</p>
+        <p>Ethereum, Base, Polygon, and more — pass <code class="pill-code">network</code> as an <code class="pill-code">eip155:&lt;chainId&gt;</code> id.</p>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<section id="security">
+  <div class="container">
+    <div class="sec-head reveal">
+      <span class="idx">08 · Security &amp; privacy</span>
+      <h2>What runs where</h2>
+      <p>You're trusting Vetra with the moment before a signature. Here's exactly what it does with it.</p>
+    </div>
+    <div class="grid2 reveal">
+      <div class="spot"><div class="spot-pad pillar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="7" rx="1.5"/><rect x="2" y="14" width="20" height="7" rx="1.5"/><path d="M6 6.5h.01M6 17.5h.01"/></svg>
+        <h3>Runs on a stateless server</h3>
+        <p>Vetra receives the pending transaction, decodes and checks it, and returns a verdict. It never sees a private key.</p>
+      </div></div>
+      <div class="spot"><div class="spot-pad pillar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
+        <h3>Never signs, never submits</h3>
+        <p>Vetra only returns an opinion. The calling agent decides what to do with the transaction.</p>
+      </div></div>
+      <div class="spot"><div class="spot-pad pillar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/></svg>
+        <h3>No custody, no accounts</h3>
+        <p>No wallet, no login, no API key to leak. Access and payment are both per-call, via x402.</p>
+      </div></div>
+      <div class="spot"><div class="spot-pad pillar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+        <h3>A preflight, not a guarantee</h3>
+        <p>Findings reflect decoded calldata and on-chain state at call time — a strong signal, not a certainty.</p>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="container-narrow">
+    <div class="sec-head reveal">
+      <span class="idx">09 · FAQ</span>
+      <h2>Fair questions</h2>
+    </div>
+    <div class="faq reveal">
+      <details>
+        <summary>What happens if I don't send a payment? <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6"/></svg></summary>
+        <p class="answer">You get an HTTP 402 with the exact price and payment details. No payment, no check.</p>
+      </details>
+      <details>
+        <summary>Does it work on any EVM chain? <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6"/></svg></summary>
+        <p class="answer">Yes — pass network as an eip155:&lt;chainId&gt; id and, optionally, your own RPC URL.</p>
+      </details>
+      <details>
+        <summary>Is it free to try? <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6"/></svg></summary>
+        <p class="answer">The REST and MCP endpoints are pay-per-call. Discovery routes (tools/list, /health) are always free, and the demo on this page runs unmetered.</p>
+      </details>
+      <details>
+        <summary>What does "unsafe" actually mean? <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6"/></svg></summary>
+        <p class="answer">At least one high or critical severity finding — an unlimited approval, a proxy upgrade, an ownership transfer, insufficient balance, or a blocklist hit.</p>
+      </details>
+      <details>
+        <summary>Does Vetra hold my funds or keys? <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6"/></svg></summary>
+        <p class="answer">No. Vetra never signs, never submits, and never takes custody of anything. It only analyzes and returns an opinion.</p>
+      </details>
+      <details>
+        <summary>Can the detectors be extended? <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6"/></svg></summary>
+        <p class="answer">Yes — each is a small, independent function. Add a new one without touching the others.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="final-cta reveal">
+      <div class="inner">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.6"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
+        <h2 style="margin-top:20px;">Sign with<br /><span class="accent">your eyes open.</span></h2>
+        <p>Try the live demo, or wire the MCP tool into your agent and watch it refuse an unlimited approval in real time.</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="#demo">Try the live demo</a>
+          <a class="btn btn-outline" href="#api">Read the API docs</a>
+        </div>
+        <p class="fineprint">MIT licensed. x402-metered. Store review pending on OKX.AI.</p>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <footer>
-    <div class="foot-links">
-      <a href="/v1/mcp/tools">Tool schema (JSON)</a>
-      <a href="/health">Service status</a>
+<footer class="site">
+  <div class="container">
+    <div class="foot-row">
+      <div class="foot-brand">
+        <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">
+          <rect width="32" height="32" rx="8" fill="var(--foreground)" />
+          <path d="M9 16.5l4.5 4.5L23 11" stroke="var(--primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+        </svg>
+        <div>
+          <p class="word" style="margin:0;">VETRA<span class="dotchar">.</span></p>
+          <p class="foot-tagline">A safety check before the signature.</p>
+        </div>
+      </div>
+      <div class="foot-links">
+        <a href="#how">How it works</a>
+        <a href="#demo">Demo</a>
+        <a href="#api">API</a>
+        <a href="#mcp">MCP</a>
+        <a href="#pricing">Pricing</a>
+        <a href="/v1/mcp/tools">Tool schema</a>
+        <a href="/health">Status</a>
+      </div>
     </div>
-    <p style="margin-top:16px;">Vetra never signs, holds, or submits transactions. It analyzes calldata and on-chain state and returns an opinion — the calling agent decides what to do with it.</p>
-  </footer>
-</div>
+    <div class="foot-bottom">
+      <p>© <span id="year"></span> Vetra. MIT licensed.</p>
+      <p class="live"><span class="dot"></span> x402-metered · reachable now</p>
+    </div>
+  </div>
+</footer>
 
 <script>
+document.getElementById("year").textContent = new Date().getFullYear();
+
+// header scroll state
+const header = document.getElementById("site-header");
+const onScroll = () => header.classList.toggle("scrolled", window.scrollY > 8);
+onScroll();
+window.addEventListener("scroll", onScroll, { passive: true });
+
+// reveal on scroll
+const revealEls = document.querySelectorAll(".reveal");
+const io = new IntersectionObserver((entries) => {
+  for (const e of entries) if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+}, { threshold: 0.12 });
+revealEls.forEach((el) => io.observe(el));
+
+// spotlight cursor tracking
+document.querySelectorAll(".spot").forEach((card) => {
+  card.addEventListener("mousemove", (e) => {
+    const r = card.getBoundingClientRect();
+    card.style.setProperty("--mx", (e.clientX - r.left) + "px");
+    card.style.setProperty("--my", (e.clientY - r.top) + "px");
+  });
+});
+
+// marquee content
+const DETECTORS = [
+  "Unlimited approval", "setApprovalForAll grant", "EIP-2612 permit", "Proxy upgrade",
+  "Admin change", "Ownership transfer", "Insufficient balance", "Blocklist hit",
+  "Native transfer to contract", "4-byte selector decode",
+];
+const RADAR_ICON = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19.07 4.93A10 10 0 1 0 22 12"/><path d="M12 12l6-3"/><circle cx="12" cy="12" r="1"/></svg>';
+const marquee = document.getElementById("marquee");
+const items = [...DETECTORS, ...DETECTORS];
+marquee.innerHTML = items.map((d) => `<span>${RADAR_ICON}${d}<span style="color:var(--border)">·</span></span>`).join("");
+
+// demo widget
 const EXAMPLES = {
   unlimited: {
     network: "eip155:8453",
     transaction: {
       to: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
       value: "0",
-      data: "0x095ea7b30000000000000000000000001234567890123456789012345678901234567890ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
-    }
+      data: "0x095ea7b30000000000000000000000001234567890123456789012345678901234567890ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    },
+  },
+  setApprovalForAll: {
+    network: "eip155:8453",
+    transaction: {
+      to: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      value: "0",
+      data: "0xa22cb4650000000000000000000000001234567890123456789012345678901234567890" + "0000000000000000000000000000000000000000000000000000000000000001",
+    },
   },
   safe: {
     network: "eip155:8453",
-    transaction: {
-      to: "0x000000000000000000000000000000000000dEaD",
-      value: "1000000000000000",
-      data: "0x"
-    }
-  }
+    transaction: { to: "0x000000000000000000000000000000000000dEaD", value: "1000000000000000", data: "0x" },
+  },
 };
+
+const SHIELD_CHECK = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>';
+const SHIELD_X = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9.5 9.5 5 5m0-5-5 5"/></svg>';
 
 document.getElementById("demo-run").addEventListener("click", async () => {
   const key = document.getElementById("demo-select").value;
   const resultEl = document.getElementById("demo-result");
-  resultEl.textContent = "Checking...";
+  resultEl.innerHTML = '<p style="color:var(--muted-foreground);font-size:13px;">Checking…</p>';
   try {
     const res = await fetch("/v1/demo-check", {
       method: "POST",
@@ -357,17 +840,24 @@ document.getElementById("demo-run").addEventListener("click", async () => {
       body: JSON.stringify(EXAMPLES[key]),
     });
     const body = await res.json();
-    const safe = body.safe;
-    const badge = document.createElement("div");
-    badge.className = "badge " + (safe ? "safe" : "unsafe");
-    badge.textContent = safe ? "SAFE TO SIGN" : "BLOCKED — UNSAFE";
-    const pre = document.createElement("pre");
-    pre.innerHTML = "<code>" + JSON.stringify(body, null, 2).replace(/</g, "&lt;") + "</code>";
-    resultEl.innerHTML = "";
-    resultEl.appendChild(badge);
-    resultEl.appendChild(pre);
+    const tone = body.safe ? "ok" : "bad";
+    const icon = body.safe ? SHIELD_CHECK : SHIELD_X;
+    const reasons = (body.findings || []).map((f) => `<li>· <b>${f.code}</b> — ${f.message}</li>`).join("");
+    resultEl.innerHTML = `
+      <div class="verdict ${tone}" style="margin:0;">
+        ${icon}
+        <div>
+          <p class="verdict-head">${body.safe ? "Safe to sign" : "Blocked — unsafe to sign"}</p>
+          <p style="margin:4px 0 0;font-size:12.5px;color:var(--muted-foreground);">Risk level: <b style="color:inherit;">${body.riskLevel}</b></p>
+          <ul>${reasons || "<li>· No findings.</li>"}</ul>
+        </div>
+      </div>
+      <details class="raw-toggle">
+        <summary>Raw JSON response</summary>
+        <pre class="raw"><code>${JSON.stringify(body, null, 2).replace(/</g, "&lt;")}</code></pre>
+      </details>`;
   } catch (e) {
-    resultEl.textContent = "Request failed: " + e;
+    resultEl.innerHTML = `<p style="color:var(--bad);font-size:13px;">Request failed: ${e}</p>`;
   }
 });
 </script>
