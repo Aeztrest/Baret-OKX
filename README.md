@@ -46,6 +46,13 @@ A real [Model Context Protocol](https://modelcontextprotocol.io) server, Streama
 
 See `src/detectors/`. Each detector is a small, independent function over decoded calldata + on-chain state — see the table on the landing page (`public/index.html#api`) for the current finding codes and severities. `src/detectors/reputation.ts` supports an optional external blocklist feed via `VETRA_BLOCKLIST_URL` (ships empty by default rather than a stale hardcoded list).
 
+## Production hardening
+
+- Environment is validated with zod at boot (`src/config.ts`) — an invalid `X402_PAY_TO` or unknown `X402_NETWORK` fails fast with a clear error instead of misbehaving at the first real payment.
+- `@fastify/helmet` (CSP tuned for the static landing page) and `@fastify/rate-limit` (120 req/min global; 20 req/min on the unmetered `/v1/demo-check`) are enabled by default.
+- Graceful shutdown on `SIGTERM`/`SIGINT`. Set `TRUST_PROXY=true` behind a reverse proxy (Render, etc.) so rate-limiting and logs see the real client IP.
+- `npm test` runs 26 vitest tests (detectors + `analyzeTransaction` against a mocked RPC client); `.github/workflows/ci.yml` runs typecheck + test + build on every push/PR.
+
 ## Deploy
 
 `render.yaml` is a Render Blueprint (`npm install && npm run build` / `npm start`, health check on `/health`). Any Node 20+ host works the same way — it's a single Fastify process with no external dependencies beyond an EVM RPC and (optionally) an x402 facilitator.
