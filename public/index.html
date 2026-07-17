@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Vetra — Check it first. Then sign.</title>
 <meta name="description" content="Vetra is a pay-per-call API and MCP tool that checks whether an EVM transaction is safe to sign, before an AI agent signs it. x402-metered, no accounts." />
+<meta name="theme-color" content="#10161c" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23141414'/%3E%3Cpath d='M9 16.5l4.5 4.5L23 11' stroke='%232f8fed' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E" />
+<!-- og:url and og:image intentionally omitted until this is deployed to a stable domain -->
+<meta property="og:title" content="Vetra — Check it first. Then sign." />
+<meta property="og:description" content="A pay-per-call API and MCP tool that checks whether an EVM transaction is safe to sign, before an AI agent signs it." />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="Vetra — Check it first. Then sign." />
+<meta name="twitter:description" content="A pay-per-call API and MCP tool that checks whether an EVM transaction is safe to sign, before an AI agent signs it." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -161,6 +170,16 @@ nav.top-nav a:hover { color: var(--foreground); background: var(--secondary); }
 .header-cta:hover { background: var(--accent-soft); }
 @media (min-width: 640px) { .header-cta { display: inline-flex; } }
 @media (max-width: 780px) { nav.top-nav { display: none; } }
+
+.menu-btn {
+  display: none; align-items: center; justify-content: center; width: 38px; height: 38px;
+  border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--foreground); cursor: pointer;
+}
+@media (max-width: 780px) { .menu-btn { display: inline-flex; } }
+.mobile-menu { display: none; flex-direction: column; border-top: 1px solid var(--border); background: var(--background); }
+.mobile-menu:not([hidden]) { display: flex; }
+.mobile-menu a { padding: 14px 24px; font-size: 14px; font-weight: 600; color: var(--foreground); border-bottom: 1px solid var(--border); }
+.mobile-menu a:hover { background: var(--secondary); }
 
 /* ══════════════════════ Buttons ══════════════════════ */
 .btn {
@@ -403,7 +422,17 @@ footer.site { padding: 48px 0 60px; }
       <a href="#faq">FAQ</a>
     </nav>
     <a class="header-cta" href="#demo">Try the demo →</a>
+    <button class="menu-btn" id="menu-btn" aria-expanded="false" aria-controls="mobile-menu" aria-label="Menu">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
   </div>
+  <nav class="mobile-menu" id="mobile-menu" hidden>
+    <a href="#how">How it works</a>
+    <a href="#demo">Demo</a>
+    <a href="#connect">Connect</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#faq">FAQ</a>
+  </nav>
 </header>
 
 <section class="hero">
@@ -836,6 +865,21 @@ const io = new IntersectionObserver((entries) => {
   for (const e of entries) if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
 }, { threshold: 0.12 });
 revealEls.forEach((el) => io.observe(el));
+
+// mobile menu
+const menuBtn = document.getElementById("menu-btn");
+const mobileMenu = document.getElementById("mobile-menu");
+menuBtn.addEventListener("click", () => {
+  const open = mobileMenu.hidden;
+  mobileMenu.hidden = !open;
+  menuBtn.setAttribute("aria-expanded", String(open));
+});
+mobileMenu.querySelectorAll("a").forEach((a) => {
+  a.addEventListener("click", () => {
+    mobileMenu.hidden = true;
+    menuBtn.setAttribute("aria-expanded", "false");
+  });
+});
 
 // connect tabs (REST / MCP)
 document.querySelectorAll(".tab-btn").forEach((btn) => {
