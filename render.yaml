@@ -20,11 +20,12 @@ services:
       # Render sits behind a proxy — needed for correct client IPs (rate-limit, logs).
       - key: TRUST_PROXY
         value: "true"
-      # Set to "true" and configure X402_PAY_TO once you have a receiving wallet.
       - key: X402_ENABLED
-        value: "false"
+        value: "true"
+      # Receiving wallet for x402 USDC payments. A public receiving address,
+      # not a secret — safe to commit (unlike a private key).
       - key: X402_PAY_TO
-        value: ""
+        value: "0xeb58c7A8c125E15b8E73532e00C51dfF3469f71D"
       - key: X402_NETWORK
         value: eip155:8453
       - key: X402_FACILITATOR_URL
