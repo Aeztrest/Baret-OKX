@@ -7,10 +7,19 @@ export type ChainConfig = {
   rpcUrl: string;
   usdcAddress: string;
   usdcDecimals: number;
+  /**
+   * The short chain name the x402 "exact" EVM scheme actually uses in
+   * PaymentRequirements.network (per the reference `x402` package's
+   * NetworkSchema — e.g. "base", not the `eip155:<chainId>` CAIP-2 id we use
+   * elsewhere as our own request-body network selector). Only set for chains
+   * the x402 facilitator we use actually supports settlement on; leave
+   * undefined for analysis-only chains.
+   */
+  x402Network?: string;
 };
 
-// A small set of well-known EVM chains, keyed by `eip155:<chainId>` (the
-// network id format x402 and OKX's payment protocol both use). Callers can
+// A small set of well-known EVM chains, keyed by `eip155:<chainId>` (our own
+// API's network selector, e.g. in a /v1/check request body). Callers can
 // override the RPC via `rpcUrl` in the request body.
 export const CHAINS: Record<string, ChainConfig> = {
   "eip155:1": {
@@ -19,6 +28,8 @@ export const CHAINS: Record<string, ChainConfig> = {
     rpcUrl: process.env.RPC_URL_ETHEREUM ?? "https://eth.llamarpc.com",
     usdcAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
     usdcDecimals: 6,
+    // Not in the x402 reference facilitator's supported network list —
+    // analysis-only; don't set X402_NETWORK to this chain.
   },
   "eip155:8453": {
     chainId: 8453,
@@ -26,6 +37,7 @@ export const CHAINS: Record<string, ChainConfig> = {
     rpcUrl: process.env.RPC_URL_BASE ?? "https://mainnet.base.org",
     usdcAddress: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
     usdcDecimals: 6,
+    x402Network: "base",
   },
   "eip155:84532": {
     chainId: 84532,
@@ -33,6 +45,7 @@ export const CHAINS: Record<string, ChainConfig> = {
     rpcUrl: process.env.RPC_URL_BASE_SEPOLIA ?? "https://sepolia.base.org",
     usdcAddress: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
     usdcDecimals: 6,
+    x402Network: "base-sepolia",
   },
   "eip155:137": {
     chainId: 137,
@@ -40,6 +53,7 @@ export const CHAINS: Record<string, ChainConfig> = {
     rpcUrl: process.env.RPC_URL_POLYGON ?? "https://polygon-rpc.com",
     usdcAddress: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
     usdcDecimals: 6,
+    x402Network: "polygon",
   },
   "eip155:10143": {
     chainId: 10143,
@@ -47,6 +61,8 @@ export const CHAINS: Record<string, ChainConfig> = {
     rpcUrl: process.env.RPC_URL_MONAD_TESTNET ?? "https://testnet-rpc.monad.xyz",
     usdcAddress: "0xf817257fed379853cDe0fa4F97AB987181B1E5Ea",
     usdcDecimals: 6,
+    // Not in the x402 reference facilitator's supported network list —
+    // analysis-only; don't set X402_NETWORK to this chain.
   },
 };
 
@@ -92,6 +108,15 @@ function loadConfig() {
   if (network && !CHAINS[network]) {
     throw new Error(
       `X402_NETWORK "${network}" is not a configured chain. Known networks: ${Object.keys(CHAINS).join(", ")}`,
+    );
+  }
+  if (x402Enabled && payTo && !CHAINS[network]?.x402Network) {
+    const payable = Object.entries(CHAINS)
+      .filter(([, c]) => c.x402Network)
+      .map(([k]) => k)
+      .join(", ");
+    throw new Error(
+      `X402_NETWORK "${network}" has no x402-payable network mapping (it's analysis-only). Use one of: ${payable}`,
     );
   }
 

@@ -7,6 +7,11 @@ const facilitator = new FacilitatorClient();
 
 export const isPaymentRequired = (): boolean => config.x402.enabled && Boolean(config.x402.payTo);
 
+/** x402's PaymentRequirements.resource must be an absolute URL, not a path. */
+function resourceUrl(req: FastifyRequest, resourcePath: string): string {
+  return `${req.protocol}://${req.hostname}${resourcePath}`;
+}
+
 /**
  * Verify-only half of the x402 flow, for callers that need to interleave
  * arbitrary work (e.g. handing off to the MCP transport) between verify and
@@ -20,10 +25,10 @@ export async function verifyX402(
   resource: string,
 ): Promise<{ paymentPayload: unknown; requirements: ReturnType<typeof buildCheckPaymentRequirements> } | null> {
   if (!isPaymentRequired()) {
-    return { paymentPayload: undefined, requirements: buildCheckPaymentRequirements(resource) };
+    return { paymentPayload: undefined, requirements: buildCheckPaymentRequirements(resourceUrl(req, resource)) };
   }
 
-  const requirements = buildCheckPaymentRequirements(resource);
+  const requirements = buildCheckPaymentRequirements(resourceUrl(req, resource));
   const paymentHeader = req.headers["x-payment"];
 
   if (typeof paymentHeader !== "string" || paymentHeader.length === 0) {

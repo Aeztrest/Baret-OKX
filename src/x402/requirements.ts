@@ -19,17 +19,25 @@ export type X402PaymentRequirements = {
  * plain-JSON "x402Version: 1" body shape (one of the formats OKX's agent
  * payment protocol detects natively, alongside the WWW-Authenticate and
  * PAYMENT-REQUIRED header variants).
+ *
+ * `resource` must be an absolute URL and `network` must be the x402 "exact"
+ * EVM scheme's short chain name (e.g. "base", not our own API's
+ * `eip155:8453` selector) — the reference x402 client library validates both
+ * strictly and silently rejects anything else.
  */
-export function buildCheckPaymentRequirements(resource: string): X402PaymentRequirements {
+export function buildCheckPaymentRequirements(resourceUrl: string): X402PaymentRequirements {
   const chain = resolveChain(config.x402.network);
+  if (!chain.x402Network) {
+    throw new Error(`Chain "${config.x402.network}" has no x402Network mapping — cannot build PaymentRequirements`);
+  }
   return {
     scheme: "exact",
-    network: config.x402.network,
+    network: chain.x402Network,
     asset: chain.usdcAddress,
     payTo: config.x402.payTo,
     amount: config.x402.checkPriceAtomic,
     maxAmountRequired: config.x402.checkPriceAtomic,
-    resource,
+    resource: resourceUrl,
     description: "Baret pre-signature transaction safety check",
     mimeType: "application/json",
     maxTimeoutSeconds: 60,
