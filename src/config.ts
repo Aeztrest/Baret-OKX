@@ -46,6 +46,9 @@ export const CHAINS: Record<string, ChainConfig> = {
     rpcUrl: process.env.RPC_URL_BASE ?? "https://mainnet.base.org",
     usdcAddress: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
     usdcDecimals: 6,
+    // Verified on-chain (name()/version() eth_call against mainnet), not
+    // assumed — the testnet contract below uses a *different* domain name,
+    // which cost us one failed payment to discover.
     usdcDomainName: "USD Coin",
     usdcDomainVersion: "2",
     x402Network: "base",
@@ -56,7 +59,9 @@ export const CHAINS: Record<string, ChainConfig> = {
     rpcUrl: process.env.RPC_URL_BASE_SEPOLIA ?? "https://sepolia.base.org",
     usdcAddress: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
     usdcDecimals: 6,
-    usdcDomainName: "USD Coin",
+    // Verified on-chain: this testnet USDC's name() is "USDC", NOT
+    // "USD Coin" like mainnet's. Do not "fix" this to match mainnet.
+    usdcDomainName: "USDC",
     usdcDomainVersion: "2",
     x402Network: "base-sepolia",
   },
@@ -66,6 +71,8 @@ export const CHAINS: Record<string, ChainConfig> = {
     rpcUrl: process.env.RPC_URL_POLYGON ?? "https://polygon-rpc.com",
     usdcAddress: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
     usdcDecimals: 6,
+    // NOT verified on-chain (public RPC was down when checked) — confirm
+    // via name()/version() eth_call before ever enabling payment on Polygon.
     usdcDomainName: "USD Coin",
     usdcDomainVersion: "2",
     x402Network: "polygon",
