@@ -1,7 +1,7 @@
 import type { RiskFinding } from "../types.js";
 
 // Pluggable address blocklist. Ships empty — wire a real threat feed by
-// setting VETRA_BLOCKLIST_URL to a JSON array of lowercase 0x addresses
+// setting BARET_BLOCKLIST_URL to a JSON array of lowercase 0x addresses
 // (fetched once at boot and cached in-process). We intentionally do not
 // ship hardcoded "known scammer" addresses: an unverified, unmaintained list
 // goes stale fast and gives a false sense of coverage.

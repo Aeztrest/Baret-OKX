@@ -1,7 +1,7 @@
-# Render Blueprint — Vetra (standalone). Usage: render.com -> New -> Blueprint -> pick this repo.
+# Render Blueprint — Baret (standalone OKX ASP service). Usage: render.com -> New -> Blueprint -> pick this repo.
 services:
   - type: web
-    name: vetra-api
+    name: baret-okx-api
     runtime: node
     plan: free
     region: frankfurt
@@ -26,7 +26,7 @@ services:
         value: eip155:8453
       - key: X402_FACILITATOR_URL
         value: https://www.x402.org/facilitator
-      - key: VETRA_CHECK_PRICE
+      - key: BARET_CHECK_PRICE
         value: "$0.01"
-      - key: VETRA_CHECK_PRICE_ATOMIC
+      - key: BARET_CHECK_PRICE_ATOMIC
         value: "10000"

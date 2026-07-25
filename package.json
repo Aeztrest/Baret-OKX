@@ -1,8 +1,8 @@
 {
-  "name": "vetra-service",
+  "name": "baret-okx",
   "version": "0.1.0",
   "private": true,
-  "description": "Vetra: pay-per-call transaction safety check for AI agents, before they sign.",
+  "description": "Baret: pay-per-call transaction safety check for AI agents, before they sign.",
   "type": "module",
   "license": "MIT",
   "engines": {

@@ -14,7 +14,7 @@ const transactionShape = z.object({
 
 /** Fresh MCP server + tool registration per request (stateless HTTP transport). */
 export function createMcpServer(): McpServer {
-  const server = new McpServer({ name: "vetra", version: config.service.version });
+  const server = new McpServer({ name: "baret", version: config.service.version });
 
   server.registerTool(
     CHECK_TRANSACTION_TOOL,
@@ -42,7 +42,7 @@ export function createMcpServer(): McpServer {
 
   server.registerTool(
     "health",
-    { title: "Health", description: "Vetra service status. Free, not payment-gated.", inputSchema: {} },
+    { title: "Health", description: "Baret service status. Free, not payment-gated.", inputSchema: {} },
     async () => ({
       content: [
         {

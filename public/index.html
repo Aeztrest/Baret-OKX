@@ -3,16 +3,16 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Vetra — Check it first. Then sign.</title>
-<meta name="description" content="Vetra is a pay-per-call API and MCP tool that checks whether an EVM transaction is safe to sign, before an AI agent signs it. x402-metered, no accounts." />
+<title>Baret — Check it first. Then sign.</title>
+<meta name="description" content="Baret is a pay-per-call API and MCP tool that checks whether an EVM transaction is safe to sign, before an AI agent signs it. x402-metered, no accounts." />
 <meta name="theme-color" content="#10161c" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23141414'/%3E%3Cpath d='M9 16.5l4.5 4.5L23 11' stroke='%232f8fed' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E" />
 <!-- og:url and og:image intentionally omitted until this is deployed to a stable domain -->
-<meta property="og:title" content="Vetra — Check it first. Then sign." />
+<meta property="og:title" content="Baret — Check it first. Then sign." />
 <meta property="og:description" content="A pay-per-call API and MCP tool that checks whether an EVM transaction is safe to sign, before an AI agent signs it." />
 <meta property="og:type" content="website" />
 <meta name="twitter:card" content="summary" />
-<meta name="twitter:title" content="Vetra — Check it first. Then sign." />
+<meta name="twitter:title" content="Baret — Check it first. Then sign." />
 <meta name="twitter:description" content="A pay-per-call API and MCP tool that checks whether an EVM transaction is safe to sign, before an AI agent signs it." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -20,7 +20,7 @@
 <style>
 /* ══════════════════════ Design tokens ══════════════════════
    Structure mirrors a shadcn-style token system (background / foreground /
-   card / primary / secondary / muted / border, light + dark), with Vetra's
+   card / primary / secondary / muted / border, light + dark), with Baret's
    own single accent: a verified-blue, not a hazard color. Semantic risk
    states (ok / warn / bad) are universal green/amber/red, independent of
    the brand accent. */
@@ -412,7 +412,7 @@ footer.site { padding: 48px 0 60px; }
         <rect width="32" height="32" rx="8" fill="var(--foreground)" />
         <path d="M9 16.5l4.5 4.5L23 11" stroke="var(--primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" />
       </svg>
-      <span class="word">VETRA<span class="dotchar">.</span></span>
+      <span class="word">BARET<span class="dotchar">.</span></span>
     </a>
     <nav class="top-nav">
       <a href="#how">How it works</a>
@@ -441,7 +441,7 @@ footer.site { padding: 48px 0 60px; }
       <span class="eyebrow"><span class="dot"></span> Live · x402-metered · Agent-to-MCP</span>
       <h1 class="display">Check it first.<br /><span class="accent">Then sign.</span></h1>
       <p class="lede">
-        Vetra decodes an EVM transaction before it's signed — unlimited approvals, blanket NFT operator
+        Baret decodes an EVM transaction before it's signed — unlimited approvals, blanket NFT operator
         grants, off-chain permits, proxy upgrades, ownership transfers — and hands back a verdict in plain
         language. One call, one small price in USDC, no account to create.
       </p>
@@ -496,13 +496,13 @@ footer.site { padding: 48px 0 60px; }
     <div class="sec-head reveal">
       <span class="idx">01 · How it works</span>
       <h2>Three steps, one verdict</h2>
-      <p>Vetra never signs, holds keys, or submits anything on-chain. It only answers one question: is this transaction safe to sign?</p>
+      <p>Baret never signs, holds keys, or submits anything on-chain. It only answers one question: is this transaction safe to sign?</p>
     </div>
     <div class="grid3">
       <div class="spot reveal"><div class="spot-pad pillar">
         <span class="pillar-num">01</span>
         <h3>Decode &amp; check</h3>
-        <p>Vetra decodes the calldata against known ERC-20/721/1155 and proxy signatures, then checks live on-chain state — contract code, balances — via RPC.</p>
+        <p>Baret decodes the calldata against known ERC-20/721/1155 and proxy signatures, then checks live on-chain state — contract code, balances — via RPC.</p>
         <ul><li>4-byte selector match</li><li>On-chain state check</li><li>No signing, no custody</li></ul>
       </div></div>
       <div class="spot reveal"><div class="spot-pad pillar">
@@ -567,14 +567,14 @@ footer.site { padding: 48px 0 60px; }
     </div>
     <div class="compare reveal">
       <div class="col left">
-        <p class="compare-label">Without Vetra</p>
+        <p class="compare-label">Without Baret</p>
         <div class="compare-row"><p class="rlabel">Before signing</p><p>A hex blob and a sign prompt. The agent trusts the calldata blindly.</p></div>
         <div class="compare-row"><p class="rlabel">Unlimited approvals</p><p>Granted silently, live forever until someone remembers to revoke them.</p></div>
         <div class="compare-row"><p class="rlabel">Proxy upgrades</p><p>Look identical to any other contract call.</p></div>
         <div class="compare-row"><p class="rlabel">Paying for a check</p><p>Needs an account, an API key, a subscription.</p></div>
       </div>
       <div class="col right">
-        <p class="compare-label">With Vetra</p>
+        <p class="compare-label">With Baret</p>
         <div class="compare-row"><p class="rlabel">Before signing</p><p>Decoded calldata, on-chain checks, and a verdict — before signing.</p></div>
         <div class="compare-row"><p class="rlabel">Unlimited approvals</p><p>Flagged high-severity the moment the call is decoded.</p></div>
         <div class="compare-row"><p class="rlabel">Proxy upgrades</p><p>Flagged critical — new code, new owner, same address.</p></div>
@@ -663,7 +663,7 @@ Content-Type: application/json
     </div>
 
     <div class="tab-panel reveal" data-panel="mcp" hidden>
-      <p class="plain-lede">Vetra also runs as a standard MCP server — the same protocol your agent framework already uses to find and call tools. Point its MCP client at <code class="pill-code">/mcp</code> and a tool called <code class="pill-code">check_transaction</code> shows up automatically.</p>
+      <p class="plain-lede">Baret also runs as a standard MCP server — the same protocol your agent framework already uses to find and call tools. Point its MCP client at <code class="pill-code">/mcp</code> and a tool called <code class="pill-code">check_transaction</code> shows up automatically.</p>
       <div class="flow-mini">
         <div class="flow-step"><span class="fnum">1</span><p>Your agent asks what tools are available — this is <b>always free</b>, just to look.</p></div>
         <div class="flow-step"><span class="fnum">2</span><p>It calls the <code class="pill-code">check_transaction</code> tool with the pending transaction.</p></div>
@@ -742,18 +742,18 @@ Content-Type: application/json
     <div class="sec-head reveal">
       <span class="idx">07 · Security &amp; privacy</span>
       <h2>What runs where</h2>
-      <p>You're trusting Vetra with the moment before a signature. Here's exactly what it does with it.</p>
+      <p>You're trusting Baret with the moment before a signature. Here's exactly what it does with it.</p>
     </div>
     <div class="grid2 reveal">
       <div class="spot"><div class="spot-pad pillar">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="7" rx="1.5"/><rect x="2" y="14" width="20" height="7" rx="1.5"/><path d="M6 6.5h.01M6 17.5h.01"/></svg>
         <h3>Runs on a stateless server</h3>
-        <p>Vetra receives the pending transaction, decodes and checks it, and returns a verdict. It never sees a private key.</p>
+        <p>Baret receives the pending transaction, decodes and checks it, and returns a verdict. It never sees a private key.</p>
       </div></div>
       <div class="spot"><div class="spot-pad pillar">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
         <h3>Never signs, never submits</h3>
-        <p>Vetra only returns an opinion. The calling agent decides what to do with the transaction.</p>
+        <p>Baret only returns an opinion. The calling agent decides what to do with the transaction.</p>
       </div></div>
       <div class="spot"><div class="spot-pad pillar">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/></svg>
@@ -793,8 +793,8 @@ Content-Type: application/json
         <p class="answer">At least one high or critical severity finding — an unlimited approval, a proxy upgrade, an ownership transfer, insufficient balance, or a blocklist hit.</p>
       </details>
       <details>
-        <summary>Does Vetra hold my funds or keys? <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6"/></svg></summary>
-        <p class="answer">No. Vetra never signs, never submits, and never takes custody of anything. It only analyzes and returns an opinion.</p>
+        <summary>Does Baret hold my funds or keys? <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6"/></svg></summary>
+        <p class="answer">No. Baret never signs, never submits, and never takes custody of anything. It only analyzes and returns an opinion.</p>
       </details>
       <details>
         <summary>Can the detectors be extended? <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6"/></svg></summary>
@@ -830,7 +830,7 @@ Content-Type: application/json
           <path d="M9 16.5l4.5 4.5L23 11" stroke="var(--primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" />
         </svg>
         <div>
-          <p class="word" style="margin:0;">VETRA<span class="dotchar">.</span></p>
+          <p class="word" style="margin:0;">BARET<span class="dotchar">.</span></p>
           <p class="foot-tagline">A safety check before the signature.</p>
         </div>
       </div>
@@ -844,7 +844,7 @@ Content-Type: application/json
       </div>
     </div>
     <div class="foot-bottom">
-      <p>© <span id="year"></span> Vetra. MIT licensed.</p>
+      <p>© <span id="year"></span> Baret. MIT licensed.</p>
       <p class="live"><span class="dot"></span> x402-metered · reachable now</p>
     </div>
   </div>

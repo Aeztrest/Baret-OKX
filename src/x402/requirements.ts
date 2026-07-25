@@ -30,7 +30,7 @@ export function buildCheckPaymentRequirements(resource: string): X402PaymentRequ
     amount: config.x402.checkPriceAtomic,
     maxAmountRequired: config.x402.checkPriceAtomic,
     resource,
-    description: "Vetra pre-signature transaction safety check",
+    description: "Baret pre-signature transaction safety check",
     mimeType: "application/json",
     maxTimeoutSeconds: 60,
     extra: { chainId: chain.chainId, decimals: chain.usdcDecimals, priceLabel: config.x402.checkPrice },

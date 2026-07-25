@@ -35,7 +35,7 @@ export const TOOL_CATALOG = [
   },
   {
     name: "health",
-    description: "Returns Vetra service status. Free, not payment-gated.",
+    description: "Returns Baret service status. Free, not payment-gated.",
     inputSchema: { type: "object", properties: {} },
   },
 ] as const;

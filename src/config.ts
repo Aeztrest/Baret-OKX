@@ -59,10 +59,10 @@ const envSchema = z.object({
   X402_FACILITATOR_URL: z.string().url().optional(),
   X402_PAY_TO: z.string().optional(),
   X402_NETWORK: z.string().optional(),
-  VETRA_CHECK_PRICE: z.string().optional(),
-  VETRA_CHECK_PRICE_ATOMIC: z.string().regex(/^\d+$/, "must be a base-unit integer string").optional(),
+  BARET_CHECK_PRICE: z.string().optional(),
+  BARET_CHECK_PRICE_ATOMIC: z.string().regex(/^\d+$/, "must be a base-unit integer string").optional(),
 
-  VETRA_BLOCKLIST_URL: z.string().url().optional(),
+  BARET_BLOCKLIST_URL: z.string().url().optional(),
   TRUST_PROXY: z.string().optional(),
 });
 
@@ -106,14 +106,14 @@ function loadConfig() {
       facilitatorUrl: e.X402_FACILITATOR_URL ?? "https://www.x402.org/facilitator",
       payTo,
       network,
-      checkPrice: e.VETRA_CHECK_PRICE ?? "$0.01",
-      checkPriceAtomic: e.VETRA_CHECK_PRICE_ATOMIC ?? "10000",
+      checkPrice: e.BARET_CHECK_PRICE ?? "$0.01",
+      checkPriceAtomic: e.BARET_CHECK_PRICE_ATOMIC ?? "10000",
     },
 
-    blocklistUrl: e.VETRA_BLOCKLIST_URL,
+    blocklistUrl: e.BARET_BLOCKLIST_URL,
 
     service: {
-      name: "Vetra",
+      name: "Baret",
       description: "Pre-signature transaction safety check for AI agents.",
       version: "0.1.0",
     },
