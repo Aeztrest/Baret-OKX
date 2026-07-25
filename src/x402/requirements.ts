@@ -41,6 +41,14 @@ export function buildCheckPaymentRequirements(resourceUrl: string): X402PaymentR
     description: "Baret pre-signature transaction safety check",
     mimeType: "application/json",
     maxTimeoutSeconds: 60,
-    extra: { chainId: chain.chainId, decimals: chain.usdcDecimals, priceLabel: config.x402.checkPrice },
+    extra: {
+      chainId: chain.chainId,
+      decimals: chain.usdcDecimals,
+      priceLabel: config.x402.checkPrice,
+      // EIP-712 domain for the USDC contract — required for clients to sign
+      // a valid EIP-3009 authorization (see ChainConfig.usdcDomainName).
+      name: chain.usdcDomainName,
+      version: chain.usdcDomainVersion,
+    },
   };
 }

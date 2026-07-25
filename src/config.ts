@@ -8,6 +8,15 @@ export type ChainConfig = {
   usdcAddress: string;
   usdcDecimals: number;
   /**
+   * EIP-712 domain name/version for the USDC contract itself — required for
+   * an x402 client to construct a valid `TransferWithAuthorization` (EIP-3009)
+   * signature. Get this wrong (or omit it) and the facilitator's /verify
+   * rejects the payment with `invalid_exact_evm_missing_eip712_domain`,
+   * silently, with no way for the client to self-correct.
+   */
+  usdcDomainName?: string;
+  usdcDomainVersion?: string;
+  /**
    * The short chain name the x402 "exact" EVM scheme actually uses in
    * PaymentRequirements.network (per the reference `x402` package's
    * NetworkSchema — e.g. "base", not the `eip155:<chainId>` CAIP-2 id we use
@@ -37,6 +46,8 @@ export const CHAINS: Record<string, ChainConfig> = {
     rpcUrl: process.env.RPC_URL_BASE ?? "https://mainnet.base.org",
     usdcAddress: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
     usdcDecimals: 6,
+    usdcDomainName: "USD Coin",
+    usdcDomainVersion: "2",
     x402Network: "base",
   },
   "eip155:84532": {
@@ -45,6 +56,8 @@ export const CHAINS: Record<string, ChainConfig> = {
     rpcUrl: process.env.RPC_URL_BASE_SEPOLIA ?? "https://sepolia.base.org",
     usdcAddress: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
     usdcDecimals: 6,
+    usdcDomainName: "USD Coin",
+    usdcDomainVersion: "2",
     x402Network: "base-sepolia",
   },
   "eip155:137": {
@@ -53,6 +66,8 @@ export const CHAINS: Record<string, ChainConfig> = {
     rpcUrl: process.env.RPC_URL_POLYGON ?? "https://polygon-rpc.com",
     usdcAddress: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
     usdcDecimals: 6,
+    usdcDomainName: "USD Coin",
+    usdcDomainVersion: "2",
     x402Network: "polygon",
   },
   "eip155:10143": {
