@@ -97,8 +97,11 @@ const envSchema = z.object({
   X402_FACILITATOR_URL: z.string().url().optional(),
   X402_PAY_TO: z.string().optional(),
   X402_NETWORK: z.string().optional(),
-  BARET_CHECK_PRICE: z.string().optional(),
-  BARET_CHECK_PRICE_ATOMIC: z.string().regex(/^\d+$/, "must be a base-unit integer string").optional(),
+  // Single source of truth for price — the atomic (base-unit) amount is
+  // derived from this at requirements-build time (see x402/requirements.ts),
+  // so the displayed price and the amount actually charged can never drift
+  // out of sync with each other.
+  BARET_CHECK_PRICE: z.string().regex(/^\$?\d+(\.\d+)?$/, 'must look like "$0.01"').optional(),
 
   BARET_BLOCKLIST_URL: z.string().url().optional(),
   TRUST_PROXY: z.string().optional(),
@@ -154,7 +157,6 @@ function loadConfig() {
       payTo,
       network,
       checkPrice: e.BARET_CHECK_PRICE ?? "$0.01",
-      checkPriceAtomic: e.BARET_CHECK_PRICE_ATOMIC ?? "10000",
     },
 
     blocklistUrl: e.BARET_BLOCKLIST_URL,

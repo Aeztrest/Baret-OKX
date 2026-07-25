@@ -1,7 +1,7 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { config } from "../config.js";
-import { buildCheckPaymentRequirements } from "./requirements.js";
-import { FacilitatorClient } from "./facilitator-client.js";
+import { buildCheckPaymentRequirements, type X402PaymentRequirements } from "./requirements.js";
+import { FacilitatorClient, type SettleResult } from "./facilitator-client.js";
 
 const facilitator = new FacilitatorClient();
 
@@ -14,18 +14,26 @@ function resourceUrl(req: FastifyRequest, resourcePath: string): string {
 
 /**
  * Verify-only half of the x402 flow, for callers that need to interleave
- * arbitrary work (e.g. handing off to the MCP transport) between verify and
- * settle. Returns `null` after already sending a 402/400 response, or the
- * decoded payment payload (plus requirements, for the later `settleX402`
- * call) once verified valid.
+ * arbitrary work (e.g. handing off to the MCP transport, or running the
+ * priced work itself) between verify and settle — settling only belongs
+ * after the work actually succeeds, so a caller that gets an analysis error
+ * was never charged for it. Returns `null` after already sending a 402/400
+ * response, or the decoded payment payload (plus requirements, for the later
+ * `settlePayment` call) once verified valid.
+ *
+ * When payment isn't required (x402 disabled, or no payout wallet
+ * configured), this never touches `buildCheckPaymentRequirements` at all —
+ * that function requires the configured chain to have a real x402Network
+ * mapping, which isn't guaranteed (or relevant) for e.g. local analysis-only
+ * runs against a chain x402 doesn't support settlement on.
  */
 export async function verifyX402(
   req: FastifyRequest,
   reply: FastifyReply,
   resource: string,
-): Promise<{ paymentPayload: unknown; requirements: ReturnType<typeof buildCheckPaymentRequirements> } | null> {
+): Promise<{ paymentPayload: unknown; requirements?: X402PaymentRequirements } | null> {
   if (!isPaymentRequired()) {
-    return { paymentPayload: undefined, requirements: buildCheckPaymentRequirements(resourceUrl(req, resource)) };
+    return { paymentPayload: undefined };
   }
 
   const requirements = buildCheckPaymentRequirements(resourceUrl(req, resource));
@@ -57,30 +65,44 @@ export async function verifyX402(
   return { paymentPayload, requirements };
 }
 
+/** Settles a previously-verified payment. Best-effort: returns `undefined` (never throws) on failure. */
+export async function settlePayment(
+  paymentPayload: unknown,
+  requirements: X402PaymentRequirements,
+): Promise<SettleResult | undefined> {
+  try {
+    return await facilitator.settle(paymentPayload, requirements);
+  } catch {
+    return undefined;
+  }
+}
+
 /** Settle a previously-verified payment and attach `X-PAYMENT-RESPONSE`. Best-effort: logs, never throws. */
 export async function settleX402(
   req: FastifyRequest,
   reply: FastifyReply,
   paymentPayload: unknown,
-  requirements: ReturnType<typeof buildCheckPaymentRequirements>,
+  requirements: X402PaymentRequirements | undefined,
 ): Promise<void> {
-  if (!isPaymentRequired() || paymentPayload === undefined) return;
-  try {
-    const settleResult = await facilitator.settle(paymentPayload, requirements);
-    // Raw Node API rather than reply.header(): must work both on the normal
-    // REST path and on the MCP path, where the reply is later hijacked and
-    // written to directly by the MCP transport (bypassing Fastify's own
-    // header store).
-    reply.raw.setHeader("X-PAYMENT-RESPONSE", Buffer.from(JSON.stringify(settleResult)).toString("base64"));
-  } catch (e) {
-    req.log.warn({ err: e }, "x402 settle failed after successful verify");
+  if (!isPaymentRequired() || paymentPayload === undefined || !requirements) return;
+  const settleResult = await settlePayment(paymentPayload, requirements);
+  if (!settleResult) {
+    req.log.warn("x402 settle failed after successful verify");
+    return;
   }
+  // Raw Node API rather than reply.header(): must work both on the normal
+  // REST path and on the MCP path, where the reply is later hijacked and
+  // written to directly by the MCP transport (bypassing Fastify's own
+  // header store).
+  reply.raw.setHeader("X-PAYMENT-RESPONSE", Buffer.from(JSON.stringify(settleResult)).toString("base64"));
 }
 
 /**
  * Wraps a paid route handler with the full x402 challenge/verify/settle flow.
- * If `X402_PAY_TO` isn't configured, the gate no-ops (useful for local dev)
- * so the service still runs without a receiving wallet configured.
+ * Settles only after `handler` succeeds — if it throws, the caller was
+ * verified-but-never-charged. If `X402_PAY_TO` isn't configured, the gate
+ * no-ops (useful for local dev) so the service still runs without a
+ * receiving wallet configured.
  */
 export async function withX402<T>(
   req: FastifyRequest,

@@ -34,5 +34,3 @@ services:
         value: https://www.x402.org/facilitator
       - key: BARET_CHECK_PRICE
         value: "$0.01"
-      - key: BARET_CHECK_PRICE_ATOMIC
-        value: "10000"

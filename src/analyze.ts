@@ -126,6 +126,7 @@ export async function analyzeTransaction(req: CheckRequest): Promise<CheckResult
 
   let isContract = false;
   let balance: bigint | undefined;
+  let rpcUnavailable = false;
   try {
     if (to) {
       const code = await client.getCode({ address: to as Hex });
@@ -135,8 +136,11 @@ export async function analyzeTransaction(req: CheckRequest): Promise<CheckResult
       balance = await client.getBalance({ address: req.userWallet as Hex });
     }
   } catch {
-    // RPC reachability issues degrade to static-only analysis rather than failing closed;
-    // we surface that as a LOW_CONFIDENCE finding below instead of throwing.
+    // Degrade to static-only (calldata-based) analysis rather than failing
+    // closed — but the caller needs to know isContract/balance-dependent
+    // findings (NATIVE_TRANSFER_TO_CONTRACT_NO_DATA, INSUFFICIENT_BALANCE)
+    // were skipped, not silently absent. Surfaced below.
+    rpcUnavailable = true;
   }
 
   const selector = data.length >= 10 ? data.slice(0, 10) : undefined;
@@ -159,6 +163,16 @@ export async function analyzeTransaction(req: CheckRequest): Promise<CheckResult
     : to;
   const reputationFinding = detectReputationFinding(spenderForReputation);
   if (reputationFinding) findings.push(reputationFinding);
+
+  if (rpcUnavailable) {
+    findings.push({
+      code: "LOW_CONFIDENCE_INCOMPLETE_DATA",
+      severity: "low",
+      message:
+        "The RPC endpoint was unreachable during analysis — contract-code and balance checks were skipped. " +
+        "Findings below are calldata-only; a clean result here is not a full guarantee.",
+    });
+  }
 
   const highestSeverity = findings.reduce<Severity | undefined>((acc, f) => {
     if (!acc || SEVERITY_RANK[f.severity] > SEVERITY_RANK[acc]) return f.severity;

@@ -15,6 +15,21 @@ export type X402PaymentRequirements = {
 };
 
 /**
+ * Converts a "$0.01"-style price label into base-unit atomic amount, using
+ * plain string/BigInt arithmetic (never floating point, which can't
+ * represent most decimal fractions exactly and would risk over/undercharging
+ * by a unit at the boundary).
+ */
+export function priceToAtomicUnits(price: string, decimals: number): string {
+  const cleaned = price.trim().replace(/^\$/, "");
+  const [wholeRaw, fracRaw = ""] = cleaned.split(".");
+  const whole = wholeRaw || "0";
+  const frac = (fracRaw + "0".repeat(decimals)).slice(0, decimals) || "0";
+  const atomic = BigInt(whole) * 10n ** BigInt(decimals) + BigInt(frac);
+  return atomic.toString();
+}
+
+/**
  * Builds the x402 PaymentRequirements advertised on a 402 response, in the
  * plain-JSON "x402Version: 1" body shape (one of the formats OKX's agent
  * payment protocol detects natively, alongside the WWW-Authenticate and
@@ -30,13 +45,14 @@ export function buildCheckPaymentRequirements(resourceUrl: string): X402PaymentR
   if (!chain.x402Network) {
     throw new Error(`Chain "${config.x402.network}" has no x402Network mapping — cannot build PaymentRequirements`);
   }
+  const amount = priceToAtomicUnits(config.x402.checkPrice, chain.usdcDecimals);
   return {
     scheme: "exact",
     network: chain.x402Network,
     asset: chain.usdcAddress,
     payTo: config.x402.payTo,
-    amount: config.x402.checkPriceAtomic,
-    maxAmountRequired: config.x402.checkPriceAtomic,
+    amount,
+    maxAmountRequired: amount,
     resource: resourceUrl,
     description: "Baret pre-signature transaction safety check",
     mimeType: "application/json",
