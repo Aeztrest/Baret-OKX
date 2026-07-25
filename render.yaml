@@ -26,8 +26,10 @@ services:
       # not a secret — safe to commit (unlike a private key).
       - key: X402_PAY_TO
         value: "0xeb58c7A8c125E15b8E73532e00C51dfF3469f71D"
+      # TEMP for payment-flow testing: Base Sepolia (free testnet USDC).
+      # Switch back to eip155:8453 (Base mainnet) before the OKX submission.
       - key: X402_NETWORK
-        value: eip155:8453
+        value: eip155:84532
       - key: X402_FACILITATOR_URL
         value: https://www.x402.org/facilitator
       - key: BARET_CHECK_PRICE
