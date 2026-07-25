@@ -5,7 +5,10 @@ services:
     runtime: node
     plan: free
     region: frankfurt
-    buildCommand: npm install && npm run build
+    # --include=dev is required: NODE_ENV=production below makes a plain
+    # `npm install`/`npm ci` skip devDependencies (typescript, @types/node),
+    # which the build step needs even though they're never shipped at runtime.
+    buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
     healthCheckPath: /health
     autoDeploy: true
