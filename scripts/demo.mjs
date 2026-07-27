@@ -8,6 +8,9 @@
 //      funded with test USDC (https://faucet.circle.com)
 //   3. node scripts/demo.mjs [baseUrl]   (defaults to the live deployment)
 //
+// Record in Windows Terminal (not the legacy blue PowerShell console host) —
+// it renders ANSI color correctly everywhere the old console host doesn't.
+//
 // Both scenes make a REAL, paid call — a "blocked" verdict is still a
 // successful analysis and gets settled same as a "safe" one. Only a request
 // that errors out (bad input) goes unpaid.
@@ -28,14 +31,58 @@ const c = {
   dim: (s) => (isTTY ? `\x1b[2m${s}\x1b[0m` : s),
   cyan: (s) => (isTTY ? `\x1b[36m${s}\x1b[0m` : s),
   amber: (s) => (isTTY ? `\x1b[33m${s}\x1b[0m` : s),
-  red: (s) => (isTTY ? `\x1b[31m\x1b[1m${s}\x1b[0m` : s),
-  green: (s) => (isTTY ? `\x1b[32m\x1b[1m${s}\x1b[0m` : s),
+  red: (s) => (isTTY ? `\x1b[97m\x1b[41m${s}\x1b[0m` : s), // white on red
+  green: (s) => (isTTY ? `\x1b[97m\x1b[42m${s}\x1b[0m` : s), // white on green
+  redText: (s) => (isTTY ? `\x1b[31m\x1b[1m${s}\x1b[0m` : s),
+  greenText: (s) => (isTTY ? `\x1b[32m\x1b[1m${s}\x1b[0m` : s),
 };
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, isTTY ? ms : 0));
-async function line(text, delay = 700) {
-  console.log(text);
-  await sleep(delay);
+
+/** Prints one character at a time — reads as "live typing", not a text dump. */
+async function type(text, { speed = 16, pauseAfter = 450 } = {}) {
+  if (!isTTY) {
+    console.log(text);
+    return;
+  }
+  for (const ch of text) {
+    process.stdout.write(ch);
+    await sleep(speed);
+  }
+  process.stdout.write("\n");
+  await sleep(pauseAfter);
+}
+
+/** A real spinner for the real network round-trip — genuine feedback, not fake delay. */
+async function withSpinner(label, promise) {
+  if (!isTTY) return promise;
+  const frames = ["|", "/", "-", "\\"];
+  let i = 0;
+  process.stdout.write("\n");
+  const timer = setInterval(() => {
+    process.stdout.write(`\r${c.dim(frames[(i = (i + 1) % frames.length)])} ${label}`);
+  }, 110);
+  try {
+    return await promise;
+  } finally {
+    clearInterval(timer);
+    process.stdout.write(`\r${" ".repeat(label.length + 4)}\r`);
+  }
+}
+
+/** ASCII-only box (no Unicode box-drawing glyphs) — renders identically in every terminal. */
+function box(lines, colorFn) {
+  const width = Math.max(...lines.map((l) => l.length)) + 4;
+  const bar = "+" + "-".repeat(width) + "+";
+  console.log(colorFn(bar));
+  for (const l of lines) {
+    console.log(colorFn("|  " + l.padEnd(width - 2) + "|"));
+  }
+  console.log(colorFn(bar));
+}
+
+function clearScreen() {
+  if (isTTY) process.stdout.write("\x1Bc");
 }
 
 if (!process.env.PRIVATE_KEY) {
@@ -63,40 +110,47 @@ async function checkTransaction(transaction) {
   return body;
 }
 
-async function scene({ title, intent, transaction, verdictGood }) {
+async function scene(n, { title, intent, transaction }) {
   console.log("");
-  await line(c.bold(c.cyan(`— ${title} —`)), 500);
-  await line(`${c.dim("agent:")} ${intent}`, 900);
-  await line(`${c.dim("→")} asking Baret before signing...`, 700);
-  await line(`${c.dim("→")} no payment on file — paying $0.01 USDC and retrying...`, 900);
+  console.log(c.bold(c.cyan(`SCENE ${n}: ${title}`)));
+  console.log(c.dim("-".repeat(("SCENE " + n + ": " + title).length)));
+  await sleep(300);
+  await type(`agent > ${intent}`, { speed: 14 });
 
-  const result = await checkTransaction(transaction);
+  const result = await withSpinner("Baret is analyzing on-chain...", checkTransaction(transaction));
 
   if (result.safe) {
-    await line(c.green("✅ SAFE") + `  ${result.summary}`, 800);
-    await line(`${c.dim("agent decision:")} signing and broadcasting.`, 700);
+    box(["SAFE TO SIGN"], c.green);
   } else {
-    await line(c.red("🛑 BLOCKED") + `  ${result.reasons?.[0] ?? result.summary}`, 900);
-    await line(`${c.dim("agent decision:")} refusing to sign.`, 700);
+    box(["BLOCKED - DO NOT SIGN"], c.red);
   }
+  await sleep(300);
+  await type(`baret > ${result.reasons?.[0] ?? result.summary}`, { speed: 10 });
+  await type(
+    result.safe ? "agent > signing and broadcasting." : "agent > refusing to sign. transaction dropped.",
+    { speed: 14, pauseAfter: 500 },
+  );
 
   if (result.payment?.transaction) {
-    await line(
-      `${c.dim("paid:")} ${c.amber("$0.01 USDC")} → ${c.dim("https://sepolia.basescan.org/tx/" + result.payment.transaction)}`,
-      600,
+    await type(
+      `${c.amber("$0.01 USDC paid")} -> https://sepolia.basescan.org/tx/${result.payment.transaction}`,
+      { speed: 6, pauseAfter: 700 },
     );
   }
   return result;
 }
 
 async function main() {
+  clearScreen();
   console.log("");
-  await line(c.bold("BARET") + c.dim("  —  pre-signature safety check for AI agents"), 900);
-  await line(c.dim("Agent-to-MCP · x402-metered · live on Base Sepolia"), 1100);
+  box(["B A R E T"], c.cyan);
+  await sleep(400);
+  await type("pre-signature safety check for AI agents", { speed: 20 });
+  await type(c.dim("Agent-to-MCP  .  x402-metered  .  live on Base Sepolia"), { speed: 10, pauseAfter: 900 });
 
-  await scene({
-    title: "Scenario 1: a malicious approval",
-    intent: 'approve(0x1234…7890, UNLIMITED) — "let this spender take everything, forever"',
+  await scene(1, {
+    title: "a malicious approval",
+    intent: 'about to sign approve(0x1234...7890, UNLIMITED)',
     transaction: {
       to: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
       value: "0",
@@ -106,15 +160,17 @@ async function main() {
     },
   });
 
-  await scene({
-    title: "Scenario 2: a plain transfer",
-    intent: "send 0.000001 ETH to a normal address",
+  await sleep(500);
+
+  await scene(2, {
+    title: "a plain transfer",
+    intent: "about to sign: send 0.000001 ETH",
     transaction: { to: "0x000000000000000000000000000000000000dEaD", value: "1000", data: "0x" },
   });
 
   console.log("");
-  await line(c.dim("$0.01 per check · " + BASE_URL), 700);
-  await line(c.dim("Baret — OKX.AI Agent Service Provider submission"), 0);
+  await type(c.dim(`$0.01 per check  .  ${BASE_URL}`), { speed: 8, pauseAfter: 400 });
+  await type(c.bold("Baret - OKX.AI Agent Service Provider"), { speed: 14, pauseAfter: 0 });
   console.log("");
 }
 
