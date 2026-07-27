@@ -279,16 +279,42 @@ h1.display .accent { color: var(--primary); }
 .pillar-meta b { color: var(--primary); font-size: 15px; }
 
 /* ══════════════════════ Demo ══════════════════════ */
-.demo-panel { margin-top: 32px; border-radius: 16px; border: 1px solid var(--border); background: var(--card); padding: 24px; }
-.demo-controls { display: flex; flex-wrap: wrap; gap: 10px; }
-select, button.run {
-  background: var(--secondary); color: var(--foreground); border: 1px solid var(--border);
-  border-radius: 8px; padding: 10px 14px; font-size: 13px; font-family: var(--font-sans); font-weight: 600;
+.demo-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 36px; }
+@media (max-width: 720px) { .demo-cards { grid-template-columns: 1fr; } }
+.demo-card {
+  text-align: left; cursor: pointer; border-radius: 14px; border: 1px solid var(--border); background: var(--card);
+  padding: 24px; font-family: var(--font-sans); transition: border-color .2s, transform .2s; position: relative;
 }
-button.run { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); cursor: pointer; font-weight: 700; }
-button.run:hover { background: var(--accent-soft); }
-#demo-result { margin-top: 18px; }
-.raw-toggle summary { cursor: pointer; font-family: var(--font-mono); font-size: 11.5px; color: var(--muted-foreground); margin-top: 12px; }
+.demo-card:hover { border-color: color-mix(in oklch, var(--foreground) 25%, var(--border)); transform: translateY(-2px); }
+.demo-card.active { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
+.demo-card:disabled { cursor: default; opacity: 0.6; transform: none; }
+.dc-tag { display: inline-block; font-family: var(--font-mono); font-size: 11px; font-weight: 800; letter-spacing: 0.08em; padding: 4px 10px; border-radius: 999px; }
+.dc-tag.bad { background: var(--bad-dim); color: var(--bad); }
+.dc-tag.ok { background: var(--ok-dim); color: var(--ok); }
+.dc-intent { margin: 16px 0 0; font-family: var(--font-mono); font-size: 13px; color: var(--foreground); line-height: 1.55; }
+.dc-cta { display: block; margin-top: 18px; font-size: 13px; font-weight: 700; color: var(--primary); }
+
+.demo-result-wrap { margin-top: 20px; }
+.demo-result-wrap[hidden] { display: none; }
+.demo-loading {
+  display: flex; align-items: center; gap: 10px; padding: 20px 22px; border-radius: 14px;
+  border: 1px solid var(--border); background: var(--card); font-family: var(--font-mono); font-size: 13px; color: var(--muted-foreground);
+}
+.result-banner { display: flex; gap: 14px; padding: 22px 24px; border-radius: 14px; }
+.result-banner.bad { background: var(--bad-dim); border: 1px solid color-mix(in oklch, var(--bad) 40%, transparent); }
+.result-banner.ok { background: var(--ok-dim); border: 1px solid color-mix(in oklch, var(--ok) 40%, transparent); }
+.result-banner svg { flex-shrink: 0; margin-top: 3px; }
+.result-head { font-size: 20px; font-weight: 800; letter-spacing: -0.01em; }
+.result-banner.bad .result-head { color: var(--bad); }
+.result-banner.ok .result-head { color: var(--ok); }
+.result-meta { margin: 5px 0 0; font-size: 12.5px; color: var(--muted-foreground); }
+.result-findings { margin: 14px 0 0; padding: 0; list-style: none; font-size: 13px; color: var(--foreground); }
+.result-findings li { padding: 3px 0; line-height: 1.5; }
+.result-impact { margin-top: 16px; padding-top: 16px; border-top: 1px solid color-mix(in oklch, currentColor 18%, transparent); font-size: 13px; color: var(--muted-foreground); }
+.result-impact b { color: var(--foreground); }
+.demo-followup { margin-top: 22px; font-size: 13.5px; color: var(--muted-foreground); }
+.demo-followup a { color: var(--primary); font-weight: 700; }
+.raw-toggle summary { cursor: pointer; font-family: var(--font-mono); font-size: 11.5px; color: var(--muted-foreground); margin-top: 14px; }
 pre.raw { margin-top: 8px; background: var(--secondary); border: 1px solid var(--border); border-radius: 10px; padding: 14px; overflow-x: auto; font-size: 12px; }
 
 /* ══════════════════════ Stats ══════════════════════ */
@@ -535,19 +561,25 @@ footer.site { padding: 48px 0 60px; }
     <div class="sec-head reveal">
       <span class="idx">02 · Try it</span>
       <h2>Live demo</h2>
-      <p>Runs against this server's own analysis engine (unmetered here — a real call to <code class="pill-code">/v1/check</code> or the MCP tool requires x402 payment).</p>
+      <p>Every day, AI agents sign transactions on autopilot. Pick one below and watch Baret decide, for real — this hits the same live analysis engine as production (unmetered here; a real call to <code class="pill-code">/v1/check</code> or the MCP tool requires x402 payment).</p>
     </div>
-    <div class="demo-panel reveal">
-      <div class="demo-controls">
-        <select id="demo-select">
-          <option value="unlimited">Unlimited ERC-20 approval — unsafe</option>
-          <option value="setApprovalForAll">setApprovalForAll grant — unsafe</option>
-          <option value="safe">Plain native transfer to an EOA — safe</option>
-        </select>
-        <button class="run" id="demo-run">Run check</button>
-      </div>
-      <div id="demo-result"></div>
+
+    <div class="demo-cards reveal">
+      <button class="demo-card" data-demo="unlimited" type="button">
+        <span class="dc-tag bad">THE TRAP</span>
+        <p class="dc-intent">agent about to sign approve(0x1234...7890, UNLIMITED)</p>
+        <span class="dc-cta">Run this check →</span>
+      </button>
+      <button class="demo-card" data-demo="safe" type="button">
+        <span class="dc-tag ok">THE ALL-CLEAR</span>
+        <p class="dc-intent">agent about to sign: send 0.000001 ETH</p>
+        <span class="dc-cta">Run this check →</span>
+      </button>
     </div>
+
+    <div class="demo-result-wrap reveal" id="demo-result-wrap" hidden></div>
+
+    <p class="demo-followup reveal">Convinced? <a href="#connect">See how to wire this into your own agent →</a></p>
   </div>
 </section>
 
@@ -953,63 +985,82 @@ const marquee = document.getElementById("marquee");
 const items = [...DETECTORS, ...DETECTORS];
 marquee.innerHTML = items.map((d) => `<span>${RADAR_ICON}${d}<span style="color:var(--border)">·</span></span>`).join("");
 
-// demo widget
-const EXAMPLES = {
+// demo widget — mirrors scripts/demo.mjs's two-scenario narrative (THE TRAP / THE ALL-CLEAR)
+const DEMO_SCENARIOS = {
   unlimited: {
-    network: "eip155:8453",
-    transaction: {
-      to: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-      value: "0",
-      data: "0x095ea7b30000000000000000000000001234567890123456789012345678901234567890ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-    },
-  },
-  setApprovalForAll: {
-    network: "eip155:8453",
-    transaction: {
-      to: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-      value: "0",
-      data: "0xa22cb4650000000000000000000000001234567890123456789012345678901234567890" + "0000000000000000000000000000000000000000000000000000000000000001",
+    tag: "THE TRAP",
+    tone: "bad",
+    impact: 'impact if signed: <b>0x1234...7890</b> could take every token in this wallet — anytime, forever.',
+    payload: {
+      network: "eip155:8453",
+      transaction: {
+        to: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        value: "0",
+        data: "0x095ea7b30000000000000000000000001234567890123456789012345678901234567890ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      },
     },
   },
   safe: {
-    network: "eip155:8453",
-    transaction: { to: "0x000000000000000000000000000000000000dEaD", value: "1000000000000000", data: "0x" },
+    tag: "THE ALL-CLEAR",
+    tone: "ok",
+    impact: "impact if signed: only the <b>0.000001 ETH</b> shown here moves. nothing else is touched.",
+    payload: {
+      network: "eip155:8453",
+      transaction: { to: "0x000000000000000000000000000000000000dEaD", value: "1000000000000000", data: "0x" },
+    },
   },
 };
 
-const SHIELD_CHECK = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>';
-const SHIELD_X = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9.5 9.5 5 5m0-5-5 5"/></svg>';
+const SHIELD_CHECK = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>';
+const SHIELD_X = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9.5 9.5 5 5m0-5-5 5"/></svg>';
 
-document.getElementById("demo-run").addEventListener("click", async () => {
-  const key = document.getElementById("demo-select").value;
-  const resultEl = document.getElementById("demo-result");
-  resultEl.innerHTML = '<p style="color:var(--muted-foreground);font-size:13px;">Checking…</p>';
-  try {
-    const res = await fetch("/v1/demo-check", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(EXAMPLES[key]),
-    });
-    const body = await res.json();
-    const tone = body.safe ? "ok" : "bad";
-    const icon = body.safe ? SHIELD_CHECK : SHIELD_X;
-    const reasons = (body.findings || []).map((f) => `<li>· <b>${f.code}</b> — ${f.message}</li>`).join("");
-    resultEl.innerHTML = `
-      <div class="verdict ${tone}" style="margin:0;">
-        ${icon}
-        <div>
-          <p class="verdict-head">${body.safe ? "Safe to sign" : "Blocked — unsafe to sign"}</p>
-          <p style="margin:4px 0 0;font-size:12.5px;color:var(--muted-foreground);">Risk level: <b style="color:inherit;">${body.riskLevel}</b></p>
-          <ul>${reasons || "<li>· No findings.</li>"}</ul>
+const demoCards = document.querySelectorAll(".demo-card");
+const demoResultWrap = document.getElementById("demo-result-wrap");
+
+demoCards.forEach((card) => {
+  card.addEventListener("click", async () => {
+    const scenario = DEMO_SCENARIOS[card.dataset.demo];
+    demoCards.forEach((c) => c.classList.toggle("active", c === card));
+    demoCards.forEach((c) => (c.disabled = true));
+
+    demoResultWrap.hidden = false;
+    demoResultWrap.innerHTML = `<div class="demo-loading"><span class="dot"></span> asking Baret before signing...</div>`;
+    demoResultWrap.scrollIntoView({ behavior: "smooth", block: "nearest" });
+
+    try {
+      const [body] = await Promise.all([
+        fetch("/v1/demo-check", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(scenario.payload),
+        }).then((r) => r.json()),
+        new Promise((r) => setTimeout(r, 500)), // keep the loading state legible even on a fast reply
+      ]);
+
+      const tone = body.safe ? "ok" : "bad";
+      const icon = body.safe ? SHIELD_CHECK : SHIELD_X;
+      const findings = (body.findings || []).map((f) => `<li>· <b>${f.code}</b> — ${f.message}</li>`).join("");
+
+      demoResultWrap.innerHTML = `
+        <div class="result-banner ${tone}">
+          ${icon}
+          <div>
+            <p class="result-head">${body.safe ? "SAFE TO SIGN" : "BLOCKED — DO NOT SIGN"}</p>
+            <p class="result-meta">Risk level: <b style="color:inherit;">${body.riskLevel}</b> · scenario: <b style="color:inherit;">${scenario.tag}</b></p>
+            <ul class="result-findings">${findings || "<li>· No findings.</li>"}</ul>
+            <p class="result-impact">${scenario.impact}</p>
+          </div>
         </div>
-      </div>
-      <details class="raw-toggle">
-        <summary>Raw JSON response</summary>
-        <pre class="raw"><code>${JSON.stringify(body, null, 2).replace(/</g, "&lt;")}</code></pre>
-      </details>`;
-  } catch (e) {
-    resultEl.innerHTML = `<p style="color:var(--bad);font-size:13px;">Request failed: ${e}</p>`;
-  }
+        <details class="raw-toggle">
+          <summary>Raw JSON response</summary>
+          <pre class="raw"><code>${JSON.stringify(body, null, 2).replace(/</g, "&lt;")}</code></pre>
+        </details>`;
+    } catch (e) {
+      demoResultWrap.innerHTML = `<p style="color:var(--bad);font-size:13px;">Request failed: ${e}</p>`;
+    } finally {
+      demoCards.forEach((c) => (c.disabled = false));
+    }
+  });
 });
 </script>
 
