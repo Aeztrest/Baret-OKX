@@ -14,6 +14,14 @@ const transactionShape = z.object({
   data: z.string().optional(),
 });
 
+const policyShape = z.union([
+  z.enum(["strict", "balanced", "permissive"]),
+  z.object({
+    blockSeverity: z.enum(["low", "medium", "high", "critical"]).optional(),
+    ignoreCodes: z.array(z.string()).optional(),
+  }),
+]);
+
 export type McpPaymentContext = { paymentPayload: unknown; requirements: X402PaymentRequirements };
 
 /**
@@ -41,6 +49,7 @@ export function createMcpServer(paymentContext?: McpPaymentContext): McpServer {
         rpcUrl: z.string().optional(),
         transaction: transactionShape,
         userWallet: z.string().optional(),
+        policy: policyShape.optional(),
       },
     },
     async (args) => {

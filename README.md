@@ -34,6 +34,12 @@ Content-Type: application/json
 
 `transaction` accepts either `{ raw: "0x..." }` (a signed or unsigned serialized tx) or a `{ from?, to, value?, data? }` object. Optional `userWallet` checks native balance sufficiency.
 
+Optional `policy` controls the block decision without changing what's detected — `findings` always shows everything found, `policy` just decides what's allowed to flip `safe` to `false`:
+- A preset string: `"strict"` (block on any finding), `"balanced"` (default — block on high/critical), `"permissive"` (block on critical only).
+- Or an object: `{ blockSeverity?: "low"|"medium"|"high"|"critical", ignoreCodes?: string[] }`.
+
+The response echoes back the resolved policy as `result.policy`.
+
 Without a valid `X-PAYMENT` header the endpoint returns `HTTP 402` with an x402 `PaymentRequirements` challenge (`x402Version: 1` JSON body — one of the formats OKX's agent payment protocol detects natively). `GET /v1/mcp/tools` is a free discovery route (pricing + schema, no payment required).
 
 ## MCP (Agent-to-MCP)

@@ -30,6 +30,21 @@ export const TOOL_CATALOG = [
           },
         },
         userWallet: { type: "string", description: "0x address to check native balance against." },
+        policy: {
+          description:
+            'Either a preset ("strict" = block on any finding, "balanced" = block on high/critical — the ' +
+            'default, "permissive" = block on critical only), or a custom { blockSeverity, ignoreCodes } object.',
+          oneOf: [
+            { type: "string", enum: ["strict", "balanced", "permissive"] },
+            {
+              type: "object",
+              properties: {
+                blockSeverity: { type: "string", enum: ["low", "medium", "high", "critical"] },
+                ignoreCodes: { type: "array", items: { type: "string" } },
+              },
+            },
+          ],
+        },
       },
     },
   },

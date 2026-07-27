@@ -40,6 +40,16 @@ const multicallAbi = [
   },
 ] as const;
 
+const upgradeToAbi = [
+  {
+    type: "function",
+    name: "upgradeTo",
+    inputs: [{ name: "newImplementation", type: "address" }],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+] as const;
+
 beforeEach(() => {
   mockGetCode.mockReset().mockResolvedValue("0x");
   mockGetBalance.mockReset().mockResolvedValue(0n);
@@ -97,5 +107,71 @@ describe("analyzeTransaction", () => {
     const result = await analyzeTransaction({ transaction: { to: TO, value: "0", data } });
     expect(result.safe).toBe(false);
     expect(result.decoded.isContract).toBe(false);
+  });
+
+  it("defaults to blockSeverity 'high' and echoes back the resolved policy", async () => {
+    const result = await analyzeTransaction({ transaction: { to: EOA, value: "1000", data: "0x" } });
+    expect(result.policy).toEqual({ blockSeverity: "high", ignoreCodes: [] });
+  });
+
+  it("'strict' blocks a bounded approval that 'balanced' (the default) would allow", async () => {
+    const data = encodeFunctionData({ abi: approveAbi, functionName: "approve", args: [SPENDER, 1000n] });
+    const withoutPolicy = await analyzeTransaction({ transaction: { to: TO, value: "0", data } });
+    expect(withoutPolicy.safe).toBe(true); // ERC20_APPROVAL_GRANTED is only "medium"
+
+    const strict = await analyzeTransaction({ transaction: { to: TO, value: "0", data }, policy: "strict" });
+    expect(strict.safe).toBe(false);
+    expect(strict.findings.some((f) => f.code === "ERC20_APPROVAL_GRANTED")).toBe(true);
+  });
+
+  it("'permissive' allows a high-severity finding through but still blocks critical", async () => {
+    const unlimited = encodeFunctionData({ abi: approveAbi, functionName: "approve", args: [SPENDER, maxUint256] });
+    const permissiveHigh = await analyzeTransaction({
+      transaction: { to: TO, value: "0", data: unlimited },
+      policy: "permissive",
+    });
+    expect(permissiveHigh.safe).toBe(true); // ERC20_APPROVAL_UNLIMITED is "high", below the "critical" threshold
+
+    const upgrade = encodeFunctionData({ abi: upgradeToAbi, functionName: "upgradeTo", args: [SPENDER] });
+    const permissiveCritical = await analyzeTransaction({
+      transaction: { to: TO, value: "0", data: upgrade },
+      policy: "permissive",
+    });
+    expect(permissiveCritical.safe).toBe(false);
+    expect(permissiveCritical.findings.some((f) => f.code === "PROXY_UPGRADE_DETECTED")).toBe(true);
+  });
+
+  it("ignoreCodes suppresses a code from blocking without removing it from `findings`", async () => {
+    const data = encodeFunctionData({ abi: approveAbi, functionName: "approve", args: [SPENDER, maxUint256] });
+    const result = await analyzeTransaction({
+      transaction: { to: TO, value: "0", data },
+      policy: { blockSeverity: "low", ignoreCodes: ["ERC20_APPROVAL_UNLIMITED", "ERC20_APPROVAL_GRANTED"] },
+    });
+    expect(result.safe).toBe(true);
+    expect(result.findings.some((f) => f.code === "ERC20_APPROVAL_UNLIMITED")).toBe(true);
+  });
+
+  it("rejects an unknown policy preset", async () => {
+    await expect(
+      analyzeTransaction({ transaction: { to: EOA, value: "0", data: "0x" }, policy: "bogus" as never }),
+    ).rejects.toThrow(AnalyzeValidationError);
+  });
+
+  it("rejects an invalid policy.blockSeverity", async () => {
+    await expect(
+      analyzeTransaction({
+        transaction: { to: EOA, value: "0", data: "0x" },
+        policy: { blockSeverity: "extreme" as never },
+      }),
+    ).rejects.toThrow(AnalyzeValidationError);
+  });
+
+  it("rejects a non-array policy.ignoreCodes", async () => {
+    await expect(
+      analyzeTransaction({
+        transaction: { to: EOA, value: "0", data: "0x" },
+        policy: { ignoreCodes: "not-an-array" as never },
+      }),
+    ).rejects.toThrow(AnalyzeValidationError);
   });
 });

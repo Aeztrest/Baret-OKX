@@ -598,6 +598,28 @@ footer.site { padding: 48px 0 60px; }
       <p><strong>Which one do I want?</strong> Calling from your own code? Use the <b>REST API</b> — it's one HTTP request. Is your agent already built on a framework that speaks MCP? Point it at the <b>MCP tool</b> directly, no extra glue code.</p>
     </div>
 
+    <div class="reveal" style="margin-top:28px;">
+      <p class="code-label">Quick setup — copy, paste, go</p>
+      <div class="grid2" style="margin-top:12px;">
+        <div>
+          <p style="font-size:13px;color:var(--muted-foreground);margin:0 0 8px;">Runnable curl (needs an x402-capable wallet to get past the 402):</p>
+          <pre class="code-block"><code>curl -X POST https://baret-okx-api.onrender.com/v1/check \
+  -H "Content-Type: application/json" \
+  -d '{"transaction":{"to":"0x...","value":"0","data":"0x..."}}'</code></pre>
+        </div>
+        <div>
+          <p style="font-size:13px;color:var(--muted-foreground);margin:0 0 8px;">Point any MCP-aware agent here (exact config syntax varies by host):</p>
+          <pre class="code-block"><code>{
+  "mcpServers": {
+    "baret": {
+      "url": "https://baret-okx-api.onrender.com/mcp"
+    }
+  }
+}</code></pre>
+        </div>
+      </div>
+    </div>
+
     <div class="tabs reveal" role="tablist">
       <button class="tab-btn active" data-tab="rest" role="tab" aria-selected="true">REST API</button>
       <button class="tab-btn" data-tab="mcp" role="tab" aria-selected="false">MCP tool</button>
@@ -605,6 +627,7 @@ footer.site { padding: 48px 0 60px; }
 
     <div class="tab-panel reveal" data-panel="rest">
       <p class="plain-lede">One endpoint. Send the pending transaction, get back <span class="pill-code">safe: true/false</span> and the reasons why.</p>
+      <p class="plain-lede" style="margin-top:12px;">Optional <code class="pill-code">policy</code>: <code class="pill-code">"strict"</code> blocks on any finding, <code class="pill-code">"balanced"</code> (default) blocks on high/critical, <code class="pill-code">"permissive"</code> blocks on critical only — or pass <code class="pill-code">{ blockSeverity, ignoreCodes }</code> directly.</p>
       <div class="flow-mini">
         <div class="flow-step"><span class="fnum">1</span><p>Your agent sends the transaction to <code class="pill-code">POST /v1/check</code>.</p></div>
         <div class="flow-step"><span class="fnum">2</span><p>Haven't paid yet? You get back an <b>HTTP 402</b> with the exact price — pay it, send the same request again.</p></div>
@@ -626,7 +649,8 @@ Content-Type: application/json
     "value": "0",
     "data": "0x095ea7b3..."
   },
-  "userWallet": "0x..."
+  "userWallet": "0x...",
+  "policy": "strict"
 }</code></pre>
           </div>
           <div>
@@ -641,7 +665,8 @@ Content-Type: application/json
   }],
   "reasons": ["..."],
   "decoded": { "functionName": "approve" },
-  "summary": "Blocked: ..."
+  "summary": "Blocked: ...",
+  "policy": { "blockSeverity": "low", "ignoreCodes": [] }
 }</code></pre>
           </div>
         </div>
@@ -684,7 +709,8 @@ Content-Type: application/json
     "properties": {
       "network": { "type": "string" },
       "transaction": { "type": "object" },
-      "userWallet": { "type": "string" }
+      "userWallet": { "type": "string" },
+      "policy": { "description": "\"strict\" | \"balanced\" | \"permissive\", or a custom object" }
     }
   }
 }</code></pre>

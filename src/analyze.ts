@@ -8,11 +8,48 @@ import {
   detectInsufficientBalanceFinding,
 } from "./detectors/privileged.js";
 import { detectReputationFinding } from "./detectors/reputation.js";
-import type { CheckRequest, CheckResult, RiskFinding, Severity } from "./types.js";
+import type { CheckRequest, CheckResult, Policy, PolicyPreset, RiskFinding, Severity } from "./types.js";
 
 export class AnalyzeValidationError extends Error {}
 
 const SEVERITY_RANK: Record<Severity, number> = { low: 1, medium: 2, high: 3, critical: 4 };
+const VALID_SEVERITIES = new Set<Severity>(["low", "medium", "high", "critical"]);
+
+// `balanced` reproduces the service's original hardcoded threshold exactly —
+// omitting `policy` entirely must behave identically to `policy: "balanced"`.
+const PRESET_THRESHOLDS: Record<PolicyPreset, Severity> = {
+  strict: "low",
+  balanced: "high",
+  permissive: "critical",
+};
+
+function resolvePolicy(policy: Policy | PolicyPreset | undefined): { blockSeverity: Severity; ignoreCodes: string[] } {
+  if (policy === undefined) {
+    return { blockSeverity: PRESET_THRESHOLDS.balanced, ignoreCodes: [] };
+  }
+  if (typeof policy === "string") {
+    if (!(policy in PRESET_THRESHOLDS)) {
+      throw new AnalyzeValidationError(
+        `Invalid policy preset "${policy}". Expected one of: ${Object.keys(PRESET_THRESHOLDS).join(", ")}`,
+      );
+    }
+    return { blockSeverity: PRESET_THRESHOLDS[policy], ignoreCodes: [] };
+  }
+  if (typeof policy !== "object") {
+    throw new AnalyzeValidationError("`policy` must be a preset string or an object");
+  }
+  const blockSeverity = policy.blockSeverity ?? PRESET_THRESHOLDS.balanced;
+  if (!VALID_SEVERITIES.has(blockSeverity)) {
+    throw new AnalyzeValidationError(
+      `Invalid policy.blockSeverity "${blockSeverity}". Expected one of: ${[...VALID_SEVERITIES].join(", ")}`,
+    );
+  }
+  const ignoreCodes = policy.ignoreCodes ?? [];
+  if (!Array.isArray(ignoreCodes) || !ignoreCodes.every((c) => typeof c === "string")) {
+    throw new AnalyzeValidationError("`policy.ignoreCodes` must be an array of strings");
+  }
+  return { blockSeverity, ignoreCodes };
+}
 
 // A malicious approve()/setApprovalForAll() is rarely the top-level call —
 // it usually rides inside a multicall or a Safe execTransaction. Unwrap a
@@ -174,13 +211,19 @@ export async function analyzeTransaction(req: CheckRequest): Promise<CheckResult
     });
   }
 
+  // `findings` stays the complete, unfiltered evidence — policy only changes
+  // which of them are allowed to cause a block, never what was observed.
   const highestSeverity = findings.reduce<Severity | undefined>((acc, f) => {
     if (!acc || SEVERITY_RANK[f.severity] > SEVERITY_RANK[acc]) return f.severity;
     return acc;
   }, undefined);
 
-  const safe = !findings.some((f) => f.severity === "high" || f.severity === "critical");
-  const reasons = findings.filter((f) => f.severity === "high" || f.severity === "critical").map((f) => f.message);
+  const { blockSeverity, ignoreCodes } = resolvePolicy(req.policy);
+  const ignoreSet = new Set(ignoreCodes);
+  const isBlocking = (f: RiskFinding) => !ignoreSet.has(f.code) && SEVERITY_RANK[f.severity] >= SEVERITY_RANK[blockSeverity];
+
+  const safe = !findings.some(isBlocking);
+  const reasons = findings.filter(isBlocking).map((f) => f.message);
 
   const summary = safe
     ? findings.length > 0
@@ -203,5 +246,6 @@ export async function analyzeTransaction(req: CheckRequest): Promise<CheckResult
     network: req.network ?? `eip155:${chain.chainId}`,
     chainId: chain.chainId,
     summary,
+    policy: { blockSeverity, ignoreCodes },
   };
 }
