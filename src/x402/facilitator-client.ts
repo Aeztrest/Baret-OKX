@@ -2,7 +2,16 @@ import { config } from "../config.js";
 import type { X402PaymentRequirements } from "./requirements.js";
 
 export type VerifyResult = { isValid: boolean; invalidReason?: string; payer?: string };
-export type SettleResult = { success: boolean; txHash?: string; networkId?: string; errorReason?: string };
+// Field names verified against the real x402.org facilitator response (not
+// assumed from the spec) — it returns `transaction`/`network`/`payer`, not
+// the `txHash`/`networkId` this type originally guessed.
+export type SettleResult = {
+  success: boolean;
+  transaction?: string;
+  network?: string;
+  payer?: string;
+  errorReason?: string;
+};
 
 /**
  * Thin HTTP client for an x402 facilitator (verify + settle). Defaults to the
