@@ -110,7 +110,7 @@ async function checkTransaction(transaction) {
   return body;
 }
 
-async function scene(n, { title, intent, transaction }) {
+async function scene(n, { title, intent, transaction, impact }) {
   console.log("");
   console.log(c.bold(c.cyan(`SCENE ${n}: ${title}`)));
   console.log(c.dim("-".repeat(("SCENE " + n + ": " + title).length)));
@@ -128,8 +128,9 @@ async function scene(n, { title, intent, transaction }) {
   await type(`baret > ${result.reasons?.[0] ?? result.summary}`, { speed: 10 });
   await type(
     result.safe ? "agent > signing and broadcasting." : "agent > refusing to sign. transaction dropped.",
-    { speed: 14, pauseAfter: 500 },
+    { speed: 14, pauseAfter: 400 },
   );
+  await type(c.dim(result.safe ? impact.safe : impact.blocked), { speed: 10, pauseAfter: 500 });
 
   if (result.payment?.transaction) {
     await type(
@@ -143,13 +144,18 @@ async function scene(n, { title, intent, transaction }) {
 async function main() {
   clearScreen();
   console.log("");
+  await type("Every day, AI agents sign blockchain transactions on autopilot.", { speed: 18, pauseAfter: 300 });
+  await type(c.bold("One bad signature is all it takes to lose everything."), { speed: 18, pauseAfter: 900 });
+  clearScreen();
+
+  console.log("");
   box(["B A R E T"], c.cyan);
   await sleep(400);
   await type("pre-signature safety check for AI agents", { speed: 20 });
-  await type(c.dim("Agent-to-MCP  .  x402-metered  .  live on Base Sepolia"), { speed: 10, pauseAfter: 900 });
+  await type(c.dim("Agent-to-MCP  .  x402-metered  .  live on Base Sepolia"), { speed: 8, pauseAfter: 600 });
 
   await scene(1, {
-    title: "a malicious approval",
+    title: "THE TRAP",
     intent: 'about to sign approve(0x1234...7890, UNLIMITED)',
     transaction: {
       to: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
@@ -158,18 +164,25 @@ async function main() {
         "0x095ea7b30000000000000000000000001234567890123456789012345678901234567890" +
         "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
     },
+    impact: {
+      blocked: "impact if signed: 0x1234...7890 could take every token in this wallet — anytime, forever.",
+    },
   });
 
   await sleep(500);
 
   await scene(2, {
-    title: "a plain transfer",
+    title: "THE ALL-CLEAR",
     intent: "about to sign: send 0.000001 ETH",
     transaction: { to: "0x000000000000000000000000000000000000dEaD", value: "1000", data: "0x" },
+    impact: {
+      safe: "impact if signed: only the 0.000001 ETH shown here moves. nothing else is touched.",
+    },
   });
 
   console.log("");
-  await type(c.dim(`$0.01 per check  .  ${BASE_URL}`), { speed: 8, pauseAfter: 400 });
+  await type(c.bold("One check. One cent. Never sign blind again."), { speed: 16, pauseAfter: 500 });
+  await type(c.dim(`$0.01 per check  .  ${BASE_URL}`), { speed: 8, pauseAfter: 300 });
   await type(c.bold("Baret - OKX.AI Agent Service Provider"), { speed: 14, pauseAfter: 0 });
   console.log("");
 }
