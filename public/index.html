@@ -253,6 +253,11 @@ h1.display .accent { color: var(--primary); }
 .grid3 { display: grid; gap: 16px; grid-template-columns: repeat(3, 1fr); margin-top: 40px; }
 .grid2 { display: grid; gap: 16px; grid-template-columns: repeat(2, 1fr); margin-top: 40px; }
 @media (max-width: 860px) { .grid3, .grid2 { grid-template-columns: 1fr; } }
+/* Grid items default to min-width:auto, so a wide <pre> inside can force the
+   whole grid (and the page body) wider than the viewport even though the
+   <pre> itself has its own overflow-x:auto — min-width:0 lets the track
+   shrink so that internal scroll actually takes effect instead. */
+.grid2 > *, .grid3 > * { min-width: 0; }
 
 .spot { position: relative; border-radius: 14px; border: 1px solid var(--border); background: var(--card); overflow: hidden; transition: border-color .2s; }
 .spot::before {
@@ -308,7 +313,8 @@ pre.raw { margin-top: 8px; background: var(--secondary); border: 1px solid var(-
 .compare-row p { margin: 5px 0 0; font-size: 13.5px; line-height: 1.55; }
 
 /* ══════════════════════ Table (findings) ══════════════════════ */
-table.findings { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-top: 32px; }
+.table-scroll { overflow-x: auto; margin-top: 32px; }
+table.findings { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 13.5px; }
 table.findings th, table.findings td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--border); }
 table.findings th { font-family: var(--font-mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted-foreground); }
 table.findings code { font-size: 12px; }
@@ -721,20 +727,22 @@ Content-Type: application/json
       <h3 class="sub-h">What it actually catches</h3>
       <p>Same detectors, same severities, whichever way you call it.</p>
     </div>
-    <table class="findings reveal">
-      <thead><tr><th>Code</th><th>Severity</th><th>What it means</th></tr></thead>
-      <tbody>
-        <tr><td><code>ERC20_APPROVAL_UNLIMITED</code></td><td><span class="sev high">high</span></td><td>An approve/increaseAllowance grants an effectively unlimited spend allowance.</td></tr>
-        <tr><td><code>SET_APPROVAL_FOR_ALL</code></td><td><span class="sev high">high</span></td><td>setApprovalForAll grants an operator control of an entire NFT collection.</td></tr>
-        <tr><td><code>PERMIT_SIGNATURE_DETECTED</code></td><td><span class="sev medium">medium/high</span></td><td>An EIP-2612 permit applies an off-chain-signed allowance on-chain.</td></tr>
-        <tr><td><code>PROXY_UPGRADE_DETECTED</code></td><td><span class="sev critical">critical</span></td><td>upgradeTo/upgradeToAndCall swaps a proxy's implementation contract.</td></tr>
-        <tr><td><code>PROXY_ADMIN_CHANGE_DETECTED</code></td><td><span class="sev critical">critical</span></td><td>changeAdmin reassigns who can upgrade a proxy.</td></tr>
-        <tr><td><code>OWNERSHIP_TRANSFER_DETECTED</code></td><td><span class="sev high">high</span></td><td>transferOwnership hands control of a contract to a new address.</td></tr>
-        <tr><td><code>INSUFFICIENT_BALANCE</code></td><td><span class="sev high">high</span></td><td>Transaction value exceeds the sender's current on-chain balance.</td></tr>
-        <tr><td><code>ADDRESS_ON_BLOCKLIST</code></td><td><span class="sev critical">critical</span></td><td>Counterparty matches a configured threat-intel feed.</td></tr>
-        <tr><td><code>NATIVE_TRANSFER_TO_CONTRACT_NO_DATA</code></td><td><span class="sev low">low</span></td><td>Sends native value to a contract with empty calldata — can revert or strand funds.</td></tr>
-      </tbody>
-    </table>
+    <div class="table-scroll reveal">
+      <table class="findings">
+        <thead><tr><th>Code</th><th>Severity</th><th>What it means</th></tr></thead>
+        <tbody>
+          <tr><td><code>ERC20_APPROVAL_UNLIMITED</code></td><td><span class="sev high">high</span></td><td>An approve/increaseAllowance grants an effectively unlimited spend allowance.</td></tr>
+          <tr><td><code>SET_APPROVAL_FOR_ALL</code></td><td><span class="sev high">high</span></td><td>setApprovalForAll grants an operator control of an entire NFT collection.</td></tr>
+          <tr><td><code>PERMIT_SIGNATURE_DETECTED</code></td><td><span class="sev medium">medium/high</span></td><td>An EIP-2612 permit applies an off-chain-signed allowance on-chain.</td></tr>
+          <tr><td><code>PROXY_UPGRADE_DETECTED</code></td><td><span class="sev critical">critical</span></td><td>upgradeTo/upgradeToAndCall swaps a proxy's implementation contract.</td></tr>
+          <tr><td><code>PROXY_ADMIN_CHANGE_DETECTED</code></td><td><span class="sev critical">critical</span></td><td>changeAdmin reassigns who can upgrade a proxy.</td></tr>
+          <tr><td><code>OWNERSHIP_TRANSFER_DETECTED</code></td><td><span class="sev high">high</span></td><td>transferOwnership hands control of a contract to a new address.</td></tr>
+          <tr><td><code>INSUFFICIENT_BALANCE</code></td><td><span class="sev high">high</span></td><td>Transaction value exceeds the sender's current on-chain balance.</td></tr>
+          <tr><td><code>ADDRESS_ON_BLOCKLIST</code></td><td><span class="sev critical">critical</span></td><td>Counterparty matches a configured threat-intel feed.</td></tr>
+          <tr><td><code>NATIVE_TRANSFER_TO_CONTRACT_NO_DATA</code></td><td><span class="sev low">low</span></td><td>Sends native value to a contract with empty calldata — can revert or strand funds.</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </section>
 
